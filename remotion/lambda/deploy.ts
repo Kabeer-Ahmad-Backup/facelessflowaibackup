@@ -26,7 +26,41 @@ const execute = async () => {
         entryPoint: path.join(process.cwd(), 'remotion/entry.ts'),
         region,
         options: {
-            webpackOverride: (config) => config, // Add custom webpack if needed
+            webpackOverride: (config) => {
+                const rules = config.module?.rules?.filter((r) => {
+                    if (r === '...') return true;
+                    if (r && typeof r === 'object' && 'test' in r && r.test instanceof RegExp) {
+                        return !r.test.test('file.css');
+                    }
+                    return true;
+                }) ?? [];
+
+                rules.push({
+                    test: /\.css$/i,
+                    use: [
+                        "style-loader",
+                        "css-loader",
+                        {
+                            loader: "postcss-loader",
+                            options: {
+                                postcssOptions: {
+                                    plugins: [
+                                        ["@tailwindcss/postcss", {}],
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                });
+
+                return {
+                    ...config,
+                    module: {
+                        ...config.module,
+                        rules,
+                    },
+                };
+            },
         },
     });
 

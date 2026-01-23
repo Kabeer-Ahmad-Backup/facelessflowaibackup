@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
+import { validateWebhookSignature } from '@remotion/lambda';
+
 export async function POST(req: NextRequest) {
-    const body = await req.json();
+    const bodyText = await req.text(); // Get text first for signature
+    const signature = req.headers.get('x-remotion-signature');
+    const secret = process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret';
+
+    if (!signature) {
+        return NextResponse.json({ message: 'Missing signature' }, { status: 401 });
+    }
+
+    try {
+        validateWebhookSignature({
+            secret,
+            body: bodyText,
+            signatureHeader: signature,
+        });
+    } catch (e) {
+        console.error('[Webhook] Invalid signature', e);
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = JSON.parse(bodyText);
     const supabase = await createClient();
 
     // Log the event (debug)
