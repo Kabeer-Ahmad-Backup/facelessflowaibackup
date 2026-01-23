@@ -52,6 +52,19 @@ export async function GET(
             throw new Error('AWS Lambda configuration missing (REMOTION_AWS_FUNCTION_NAME or REMOTION_SERVE_URL)');
         }
 
+
+        // Calculate concurrency to maximize speed while staying under AWS limits
+        // Target 50 concurrent lambdas (safe for new accounts, much faster than 1)
+        const TARGET_CONCURRENCY = 50;
+        const totalFrames = scenes.reduce((acc: number, scene: any) => acc + Math.ceil((scene.duration || 5) * 30), 0) || 300;
+
+        // Ensure framesPerLambda is at least 60 (Remotion recommendation)
+        // For 100k frames: 100,000 / 50 = 2000 frames/lambda
+        // For 300 frames: 300 / 50 = 6 frames -> clamped to 60 -> 5 lambdas
+        const dynamicFramesPerLambda = Math.max(60, Math.ceil(totalFrames / TARGET_CONCURRENCY));
+
+        console.log(`[Render API] Optimization: ${totalFrames} frames / ${TARGET_CONCURRENCY} concurrency = ${dynamicFramesPerLambda} frames/lambda`);
+
         const { renderId, bucketName } = await renderMediaOnLambda({
             region: (process.env.REMOTION_AWS_REGION as any) || region,
             functionName,
@@ -63,7 +76,7 @@ export async function GET(
                 projectId // Critical for Webhook correlation
             },
             codec: 'h264',
-            framesPerLambda: 100, // Reduced concurrency to avoid Rate Exceeded errors on new accounts
+            framesPerLambda: dynamicFramesPerLambda,
             downloadBehavior: {
                 type: 'download',
                 fileName: null,
