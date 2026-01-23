@@ -55,7 +55,7 @@ export async function GET(
 
         // Calculate concurrency to maximize speed while staying under AWS limits
         // Target 50 concurrent lambdas (safe for new accounts, much faster than 1)
-        const TARGET_CONCURRENCY = 50;
+        const TARGET_CONCURRENCY = 7;
         const totalFrames = scenes.reduce((acc: number, scene: any) => acc + Math.ceil((scene.duration || 5) * 30), 0) || 300;
 
         // Ensure framesPerLambda is at least 60 (Remotion recommendation)
