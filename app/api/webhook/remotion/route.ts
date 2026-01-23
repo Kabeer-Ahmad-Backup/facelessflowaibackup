@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
     const secret = process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret';
 
     if (!signature) {
+        console.error('[Webhook] Missing signature header');
         return NextResponse.json({ message: 'Missing signature' }, { status: 401 });
     }
 
@@ -20,6 +21,8 @@ export async function POST(req: NextRequest) {
         });
     } catch (e) {
         console.error('[Webhook] Invalid signature', e);
+        console.log(`[Webhook Debug] Secret configured: ${secret ? 'Yes' : 'No'} (starts with ${secret?.substring(0, 3)}...)`);
+        console.log(`[Webhook Debug] Received Signature: ${signature}`);
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
