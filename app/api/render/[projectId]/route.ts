@@ -65,6 +65,10 @@ export async function GET(
 
         console.log(`[Render API] Optimization: ${totalFrames} frames / ${TARGET_CONCURRENCY} concurrency = ${dynamicFramesPerLambda} frames/lambda`);
 
+        const webhookSecret = process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret';
+        console.log(`[Render API] Webhook Secret used: ${webhookSecret.substring(0, 3)}...`);
+        console.log(`[Render API] Webhook URL: https://facelessflowai.vercel.app/api/webhook/remotion`);
+
         const { renderId, bucketName } = await renderMediaOnLambda({
             region: (process.env.REMOTION_AWS_REGION as any) || region,
             functionName,
@@ -83,7 +87,7 @@ export async function GET(
             },
             webhook: {
                 url: 'https://facelessflowai.vercel.app/api/webhook/remotion',
-                secret: process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret',
+                secret: webhookSecret,
             },
         });
 

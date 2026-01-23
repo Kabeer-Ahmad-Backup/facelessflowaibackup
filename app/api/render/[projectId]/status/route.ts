@@ -48,6 +48,28 @@ export async function GET(
             region: (process.env.REMOTION_AWS_REGION as any) || region,
         });
 
+        if (progress.overallProgress >= 1 || progress.outputFile) {
+            // RENDERING COMPLETE (Fallback if Webhook fails)
+            // Construct video URL (S3)
+            const videoUrl = `https://${bucketName}.s3.${region}.amazonaws.com/renders/${renderId}/out.mp4`;
+
+            await supabase.from('projects').update({
+                status: 'done',
+                video_url: videoUrl
+            }).eq('id', projectId);
+
+            return NextResponse.json({
+                progress: 1,
+                status: 'done',
+                details: {
+                    framesRendered: progress.framesRendered,
+                    costs: progress.costs,
+                    lambdasInvoked: progress.lambdasInvoked
+                },
+                videoUrl
+            });
+        }
+
         return NextResponse.json({
             progress: progress.overallProgress,
             status: project.status,
