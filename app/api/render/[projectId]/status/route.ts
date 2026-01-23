@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 import { getRenderProgress } from '@remotion/lambda/client';
 import { region } from '../../../../../remotion/lambda/config';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ projectId: string }> }

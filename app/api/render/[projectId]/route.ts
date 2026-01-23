@@ -63,13 +63,13 @@ export async function GET(
                 projectId // Critical for Webhook correlation
             },
             codec: 'h264',
-            framesPerLambda: 200, // Reduced concurrency to avoid Rate Exceeded errors on new accounts
+            framesPerLambda: 100, // Reduced concurrency to avoid Rate Exceeded errors on new accounts
             downloadBehavior: {
                 type: 'download',
                 fileName: null,
             },
             webhook: {
-                url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://mirza-web.vercel.app'}/api/webhook/remotion`,
+                url: 'https://facelessflowai.vercel.app/api/webhook/remotion',
                 secret: process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret',
             },
         });

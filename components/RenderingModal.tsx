@@ -79,12 +79,14 @@ export default function RenderingModal({
                             <h2 className="text-xl font-bold text-white mb-2">
                                 {status === 'rendering' ? 'Weaving your Vision...' :
                                     status === 'done' ? 'Masterpiece Created!' :
-                                        'Rendering Failed'}
+                                        status === 'error' ? 'Rendering Failed' :
+                                            'Initializing Ritual...'}
                             </h2>
                             <p className="text-stone-400 text-sm">
                                 {status === 'rendering' ? 'Your video is being rendered on the cloud using distributed AWS Lambdas.' :
                                     status === 'done' ? 'Your video is ready for the world.' :
-                                        error || 'Something went wrong during the ritual.'}
+                                        status === 'error' ? (error || 'Something went wrong during the ritual.') :
+                                            'Preparing the cloud infrastructure...'}
                             </p>
                         </div>
 

@@ -97,7 +97,7 @@ export default function ProjectPage() {
             setShowRenderModal(true);
             progressInterval = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/render/${projectId}/status`);
+                    const res = await fetch(`/api/render/${projectId}/status`, { cache: 'no-store' });
                     const data = await res.json();
 
                     if (data.status === 'done' || data.status === 'error') {
@@ -110,7 +110,7 @@ export default function ProjectPage() {
                 } catch (e) {
                     console.error("Polling error", e);
                 }
-            }, 3000);
+            }, 1000);
         }
 
         return () => {
