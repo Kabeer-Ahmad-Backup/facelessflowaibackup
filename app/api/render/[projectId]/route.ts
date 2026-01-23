@@ -54,14 +54,20 @@ export async function GET(
 
 
         // Calculate concurrency to maximize speed while staying under AWS limits
-        // Target 50 concurrent lambdas (safe for new accounts, much faster than 1)
-        const TARGET_CONCURRENCY = 800;
+        // Target 50-100 concurrent lambdas (safe for new accounts)
+        const TARGET_CONCURRENCY = 200;
         const totalFrames = scenes.reduce((acc: number, scene: any) => acc + Math.ceil((scene.duration || 5) * 30), 0) || 300;
 
+        // REMOTION LIMIT: Max 200 lambda functions per render.
+        // We MUST ensure totalFrames / framesPerLambda <= 200
+        const minFramesForLimit = Math.ceil(totalFrames / 200);
+
+        // Optimal frames based on our target concurrency
+        const optimalFrames = Math.ceil(totalFrames / TARGET_CONCURRENCY);
+
         // Ensure framesPerLambda is at least 60 (Remotion recommendation)
-        // For 100k frames: 100,000 / 50 = 2000 frames/lambda
-        // For 300 frames: 300 / 50 = 6 frames -> clamped to 60 -> 5 lambdas
-        const dynamicFramesPerLambda = Math.max(60, Math.ceil(totalFrames / TARGET_CONCURRENCY));
+        // And effectively max(minFramesForLimit, optimalFrames) to respect the 200 limit
+        const dynamicFramesPerLambda = Math.max(60, minFramesForLimit, optimalFrames);
 
         console.log(`[Render API] Optimization: ${totalFrames} frames / ${TARGET_CONCURRENCY} concurrency = ${dynamicFramesPerLambda} frames/lambda`);
 
