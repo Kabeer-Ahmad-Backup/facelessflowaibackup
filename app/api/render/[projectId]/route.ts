@@ -55,7 +55,7 @@ export async function GET(
 
         // Calculate concurrency to maximize speed while staying under AWS limits
         // Target 50-100 concurrent lambdas (safe for new accounts)
-        const TARGET_CONCURRENCY = 200;
+        const TARGET_CONCURRENCY = 100;
         const totalFrames = scenes.reduce((acc: number, scene: any) => acc + Math.ceil((scene.duration || 5) * 30), 0) || 300;
 
         // REMOTION LIMIT: Max 200 lambda functions per render.
