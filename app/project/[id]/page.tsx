@@ -92,7 +92,7 @@ export default function ProjectPage() {
 
         // POLL FOR RENDER PROGRESS
         let progressInterval: NodeJS.Timeout;
-        if (project?.status === 'rendering') {
+        if (project?.status === 'rendering' || rendering) {
             setRendering(true);
             setShowRenderModal(true);
             progressInterval = setInterval(async () => {
@@ -100,12 +100,21 @@ export default function ProjectPage() {
                     const res = await fetch(`/api/render/${projectId}/status`, { cache: 'no-store' });
                     const data = await res.json();
 
-                    if (data.status === 'done' || data.status === 'error') {
-                        clearInterval(progressInterval);
-                    }
-
                     if (data.progress !== undefined) {
                         setRenderProgress(data);
+                    }
+
+                    // Check for status change (done/error)
+                    if (data.status === 'done' || data.status === 'error') {
+                        clearInterval(progressInterval);
+
+                        // Update local project state immediately
+                        setProject((prev: any) => ({
+                            ...prev,
+                            status: data.status,
+                            video_url: data.videoUrl || prev?.video_url
+                        }));
+                        setRendering(false);
                     }
                 } catch (e) {
                     console.error("Polling error", e);
@@ -118,7 +127,7 @@ export default function ProjectPage() {
             supabase.removeChannel(projectChannel);
             if (progressInterval) clearInterval(progressInterval);
         };
-    }, [projectId, router, project?.status]);
+    }, [projectId, router, project?.status, rendering]); // Added rendering dependency
 
     const [generationLog, setGenerationLog] = useState<string>("");
 
@@ -233,14 +242,17 @@ export default function ProjectPage() {
         }
     };
 
-
     const handleExportVideo = async () => {
         if (!project) return;
         setRendering(true);
         setShowRenderModal(true);
+
+        // Optimistic Update
+        setProject(prev => prev ? ({ ...prev, status: 'rendering' }) : null);
+
         try {
             // Call API route to trigger async render
-            const response = await fetch(`/api/render/${projectId}`);
+            const response = await fetch(`/api/render/${projectId}`, { method: 'POST' }); // Ensure method is POST/GET as defined
 
             if (!response.ok) {
                 const error = await response.json();
@@ -254,6 +266,8 @@ export default function ProjectPage() {
         } catch (e: any) {
             toast.error(`Export error: ${e.message}`);
             setRendering(false);
+            // Revert optimistic update on error
+            setProject(prev => prev ? ({ ...prev, status: 'ready' as any }) : null);
         }
     };
 
