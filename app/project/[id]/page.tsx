@@ -252,11 +252,18 @@ export default function ProjectPage() {
 
         try {
             // Call API route to trigger async render
-            const response = await fetch(`/api/render/${projectId}`, { method: 'POST' }); // Ensure method is POST/GET as defined
+            const response = await fetch(`/api/render/${projectId}`, { method: 'GET' });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Export failed');
+                let errorMsg = 'Export failed';
+                try {
+                    const error = await response.json();
+                    errorMsg = error.error || error.message || errorMsg;
+                } catch {
+                    const text = await response.text();
+                    errorMsg = text || errorMsg;
+                }
+                throw new Error(errorMsg);
             }
 
             // Success - just notify user
