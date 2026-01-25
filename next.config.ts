@@ -8,7 +8,8 @@ const nextConfig: NextConfig = {
     '@remotion/studio-server',
     '@remotion/bundler',
     'esbuild',
-    'prettier'
+    'prettier',
+    '@runware/sdk-js'
   ],
   webpack: (config, { isServer }) => {
     config.module.rules.push({
