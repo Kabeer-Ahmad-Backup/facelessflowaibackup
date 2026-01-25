@@ -1,7 +1,9 @@
-import { AbsoluteFill, Sequence, Series } from 'remotion';
+import { AbsoluteFill, Sequence, Series, Audio } from 'remotion';
 import { z } from 'zod';
 import { Scene } from './Scene';
 import { ProjectSettings, SceneApi } from '../types';
+import cameraFlashSound from '../public/camera_flash.mp3';
+import swooshSound from '../public/swoosh.mp3';
 
 export const MainCompositionSchema = z.object({
     scenes: z.array(z.any()), // refined type below
@@ -25,13 +27,31 @@ export const MainComposition: React.FC<Props> = ({ scenes, settings }) => {
     return (
         <AbsoluteFill className="bg-black">
             <Series>
-                {scenes.map((scene) => {
+                {scenes.map((scene, index) => {
                     const durationInSeconds = scene.duration || 5;
                     const durationInFrames = Math.ceil(durationInSeconds * 30);
+
+                    // Determine if we should play a transition sound at the END of this scene
+                    // Logic: Play for all scenes EXCEPT the last one (index < scenes.length - 1)
+                    const shouldPlaySound = index < scenes.length - 1 &&
+                        settings.transitions.transitionSound &&
+                        settings.transitions.transitionSound !== 'none';
+
+                    const soundFile = settings.transitions.transitionSound === 'camera_flash'
+                        ? cameraFlashSound
+                        : swooshSound;
+
+                    // Start sound 15 frames before the end (approx 0.5s)
+                    const soundStartFrame = Math.max(0, durationInFrames - 15);
 
                     return (
                         <Series.Sequence key={scene.id} durationInFrames={durationInFrames}>
                             <Scene scene={scene} settings={settings} />
+                            {shouldPlaySound && (
+                                <Sequence from={soundStartFrame}>
+                                    <Audio src={soundFile} />
+                                </Sequence>
+                            )}
                         </Series.Sequence>
                     )
                 })}

@@ -155,7 +155,7 @@ export const Scene: React.FC<Props> = ({ scene, settings }) => {
                                 };
                                 return sizeMap[settings.captions.fontSize || 'medium'];
                             })(),
-                            fontFamily: settings.captions.font === 'brush' ? 'Brush Script MT, cursive' : undefined,
+                            fontFamily: settings.captions.font === 'brush' ? '"Permanent Marker", cursive' : undefined,
                             fontWeight: settings.captions.strokeWidth === 'bold' ? 'bold' : 'normal',
                             textShadow: (() => {
                                 const strokeMap = {

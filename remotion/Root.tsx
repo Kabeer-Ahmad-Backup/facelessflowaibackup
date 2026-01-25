@@ -1,6 +1,9 @@
 import { Composition } from 'remotion';
 import { MainComposition, MainCompositionSchema } from './MainComposition';
+import { loadFont } from '@remotion/google-fonts/PermanentMarker';
 import './style.css';
+
+loadFont();
 
 export const RemotionRoot: React.FC = () => {
     return (

@@ -193,6 +193,103 @@ export default function ProjectPage() {
         }
     };
 
+    const handleContinueGeneration = async () => {
+        if (!project) return;
+        setGenerating(true);
+        setGenProgress(0);
+        setGenerationLog("Analyzing missing content...");
+
+        try {
+            const sentences = project.script.match(/[^.!?]+[.!?]+/g) || [project.script];
+            let generatedCount = 0;
+
+            for (let i = 0; i < sentences.length; i++) {
+                const text = sentences[i].trim();
+                if (!text) continue;
+
+                // Update progress
+                setGenProgress(((i) / sentences.length) * 100);
+
+                // Use current state 'scenes' (snapshot) to decide what to do
+                // Note: We search the *original* list. If we fix something, we won't see the update in 'scenes' variable 
+                // until next render, but that's fine for sequential processing.
+                const existingScene = scenes.find(s => s.order_index === i);
+
+                // 1. Missing Scene
+                if (!existingScene) {
+                    setGenerationLog(`Generating missing scene ${i + 1}...`);
+                    await performGeneration(i, text);
+                    generatedCount++;
+                }
+                // 2. Error Scene
+                else if (existingScene.status === 'error') {
+                    setGenerationLog(`Retrying failed scene ${i + 1}...`);
+                    // Delete first to avoid conflicts/cleanup
+                    await supabase.from('scenes').delete().eq('id', existingScene.id);
+                    // Update local UI to remove it temporarily
+                    setScenes(prev => prev.filter(s => s.id !== existingScene.id));
+
+                    await performGeneration(i, text);
+                    generatedCount++;
+                }
+                // 3. Asset Checks on Existing Ready/Pending Scenes
+                else {
+                    let didWork = false;
+                    // Check Audio
+                    if (!existingScene.audio_url) {
+                        setGenerationLog(`Restoring audio for scene ${i + 1}...`);
+                        await handleRegenerateAudio(existingScene.id, text, i);
+                        didWork = true;
+                    }
+
+                    // Check Image (Visuals)
+                    if (!existingScene.image_url) {
+                        setGenerationLog(`Restoring visuals for scene ${i + 1}...`);
+                        await handleRegenerateImage(existingScene.id, text, i);
+                        didWork = true;
+                    }
+
+                    if (didWork) generatedCount++;
+                }
+
+                // Rate Limit
+                if (generatedCount > 0 && generatedCount % 10 === 0) {
+                    setGenerationLog(`Pausing for rate limits (10s)...`);
+                    await new Promise(r => setTimeout(r, 10000));
+                }
+            }
+            setGenerationLog("All scenes checked and generated!");
+            setGenProgress(100);
+        } catch (e) {
+            console.error(e);
+            toast.error("Continue generation interrupted");
+        } finally {
+            setGenerating(false);
+            setTimeout(() => {
+                setGenerationLog("");
+                setGenProgress(0);
+            }, 3000);
+        }
+    };
+
+    const performGeneration = async (index: number, text: string) => {
+        if (!project) return;
+
+        const result = await generateScene(projectId, index, text, project.settings);
+
+        if (!result.success || !result.scene) {
+            toast.error(`Error generating scene ${index + 1}: ${result.error}`);
+            // Don't break loop, just continue to next try or let user retry
+            return;
+        }
+
+        setScenes(prev => {
+            const existing = prev.find(s => s.id === result.scene!.id);
+            if (existing) return prev;
+            return [...prev, result.scene!].sort((a, b) => a.order_index - b.order_index);
+        });
+    };
+
     const handleUpdateSettings = async (newSettings: Partial<ProjectSettings>) => {
         if (!project) return;
 
@@ -293,7 +390,7 @@ export default function ProjectPage() {
                     <h1 className="text-lg font-bold text-stone-200">Video Studio</h1>
                 </div>
                 <div className="flex items-center gap-3">
-                    {project.settings.visualStyle === 'stock_natural' && (
+                    {(project.settings.visualStyle === 'stock_natural' || project.settings.visualStyle === 'stock_vector' || project.settings.visualStyle === 'stock_art') && (
                         <button
                             onClick={() => setShowCredits(!showCredits)}
                             className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm ${showCredits ? 'bg-orange-600 text-white' : 'bg-stone-800 hover:bg-stone-700 text-stone-200'}`}
@@ -558,6 +655,17 @@ export default function ProjectPage() {
                             </div>
                         )}
                     </div>
+                    {scenes.length > 0 && !generating && (
+                        <div className="p-2 border-t border-white/5">
+                            <button
+                                onClick={handleContinueGeneration}
+                                className="w-full py-2 bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs rounded border border-white/5 transition-all flex items-center justify-center gap-2"
+                            >
+                                <RefreshCw size={12} />
+                                Continue / Fix Generation
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* CENTER: Player */}
@@ -724,6 +832,17 @@ export default function ProjectPage() {
                             <option value="crossfade">Crossfade</option>
                             <option value="white_flash">White Flash</option>
                             <option value="camera_flash">Camera Flash</option>
+                        </select>
+                        <select
+                            value={project.settings.transitions.transitionSound || 'none'}
+                            onChange={(e) => handleUpdateSettings({
+                                transitions: { ...project.settings.transitions, transitionSound: e.target.value as any }
+                            })}
+                            className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1 ml-1"
+                        >
+                            <option value="none">No Sound</option>
+                            <option value="camera_flash">🔊 Camera Flash</option>
+                            <option value="swoosh">🔊 Swoosh</option>
                         </select>
                         {/* Divider */}
                         <div className="h-6 w-px bg-white/10"></div>

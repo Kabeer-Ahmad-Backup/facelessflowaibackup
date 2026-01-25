@@ -198,6 +198,9 @@ export default function Home() {
                                         <option value="health">Medical / Health</option>
                                         <option value="art">Pop Art / Retro</option>
                                         <option value="stock_natural">Stock + AI (Natural)</option>
+                                        <option value="stock_vector">Stock + AI (Vector)</option>
+                                        <option value="stock_art">Stock + AI (Art)</option>
+                                        <option value="clean_illustration">Clean Illustration</option>
                                     </select>
                                 </div>
 

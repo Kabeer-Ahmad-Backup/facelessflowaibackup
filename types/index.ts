@@ -10,7 +10,7 @@ export type ProjectApi = {
 
 export type ProjectSettings = {
     aspectRatio: '16:9' | '9:16' | '1:1';
-    visualStyle: 'zen' | 'normal' | 'stick' | 'health' | 'cartoon' | 'art' | 'stock_natural';
+    visualStyle: 'zen' | 'normal' | 'stick' | 'health' | 'cartoon' | 'art' | 'stock_natural' | 'clean_illustration' | 'stock_vector' | 'stock_art';
     imageModel: 'fal' | 'gemini' | 'runware';  // Renamed from imageProvider for clarity or alias? user said "image generator". Let's stick to imageProvider to match Python script logic if possible, but valid types are key.
     audioVoice: string;
     disclaimerEnabled: boolean;
@@ -31,6 +31,7 @@ export type ProjectSettings = {
     transitions: {
         mode: 'random' | 'specific';
         type: 'fadein' | 'crossfade' | 'white_flash' | 'camera_flash' | 'none';
+        transitionSound?: 'none' | 'camera_flash' | 'swoosh';
     };
     cameraMovements?: ('zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'pan_up' | 'pan_down' | 'static')[];
 };
