@@ -40,15 +40,13 @@ export default function RenderingModal({
                     {/* Background Glow */}
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-600 via-purple-600 to-blue-600 opacity-50" />
 
-                    {/* Close Button (only if done or error) */}
-                    {(status === 'done' || status === 'error') && (
-                        <button
-                            onClick={onClose}
-                            className="absolute top-4 right-4 text-stone-500 hover:text-stone-300 transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-                    )}
+                    {/* Close Button (Always visible now to allow minimizing) */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 text-stone-500 hover:text-stone-300 transition-colors z-20"
+                    >
+                        <X size={20} />
+                    </button>
 
                     <div className="flex flex-col items-center text-center space-y-6 pt-4">
 

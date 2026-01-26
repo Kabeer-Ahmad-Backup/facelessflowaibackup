@@ -457,10 +457,10 @@ export default function ProjectPage() {
                                 {Array.from({ length: Math.ceil(scenes.length / 200) }).map((_, idx) => {
                                     const partNum = idx + 1;
                                     const partData = project.settings.renderParts?.find((p: any) => p.part === partNum);
-                                    const prevPartData = partNum > 1 ? project.settings.renderParts?.find((p: any) => p.part === partNum - 1) : null;
 
-                                    // Enable Part 2 only if Part 1 is done
-                                    const isDisabled = partNum > 1 && prevPartData?.status !== 'done';
+                                    // Independent Export: No disable logic based on previous parts
+                                    const isDisabled = false;
+
                                     // Only show rendering if the part says so AND the global project is actually in rendering mode.
                                     const isRendering = partData?.status === 'rendering' && project.status === 'rendering';
                                     const isDone = partData?.status === 'done';
@@ -480,14 +480,12 @@ export default function ProjectPage() {
                                             ) : (
                                                 <button
                                                     onClick={() => handleExportVideo(partNum)}
-                                                    disabled={isDisabled || isRendering}
+                                                    disabled={isRendering}
                                                     className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-colors ${isRendering
                                                         ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
-                                                        : isDisabled
-                                                            ? 'bg-stone-800 text-stone-600 cursor-not-allowed border border-white/5'
-                                                            : 'bg-stone-800 hover:bg-stone-700 text-stone-300 border border-white/10'
+                                                        : 'bg-stone-800 hover:bg-stone-700 text-stone-300 border border-white/10'
                                                         }`}
-                                                    title={isDisabled ? "Complete previous part first" : isRendering ? "Rendering..." : "Export this part"}
+                                                    title={isRendering ? "Rendering..." : "Export this part"}
                                                 >
                                                     {isRendering ? (
                                                         <div className="flex items-center gap-1">
