@@ -427,57 +427,59 @@ export default function ProjectPage() {
                         {showScript ? 'Hide' : 'Show'} Script
                     </button>
                     {/* SPLIT EXPORT UI */}
-                    {scenes.length > 300 ? (
-                        <div className="flex flex-col gap-2 items-end">
-                            <span className="text-[10px] text-stone-500 font-mono">Large Project ({scenes.length} Scenes) - Multi-Part Export</span>
-                            {Array.from({ length: Math.ceil(scenes.length / 300) }).map((_, idx) => {
-                                const partNum = idx + 1;
-                                const partData = project.settings.renderParts?.find((p: any) => p.part === partNum);
-                                const prevPartData = partNum > 1 ? project.settings.renderParts?.find((p: any) => p.part === partNum - 1) : null;
+                    {scenes.length > 200 ? (
+                        <div className="flex flex-col gap-1 items-end">
+                            <span className="text-[10px] text-stone-500 font-mono">Multi-Part Export ({scenes.length} Scenes)</span>
+                            <div className="flex flex-wrap gap-2 justify-end max-w-md">
+                                {Array.from({ length: Math.ceil(scenes.length / 200) }).map((_, idx) => {
+                                    const partNum = idx + 1;
+                                    const partData = project.settings.renderParts?.find((p: any) => p.part === partNum);
+                                    const prevPartData = partNum > 1 ? project.settings.renderParts?.find((p: any) => p.part === partNum - 1) : null;
 
-                                // Enable Part 2 only if Part 1 is done
-                                const isDisabled = partNum > 1 && prevPartData?.status !== 'done';
-                                // Only show rendering if the part says so AND the global project is actually in rendering mode.
-                                // If project was reset to 'draft'/'ready', any stuck 'rendering' flags in parts should be ignored.
-                                const isRendering = partData?.status === 'rendering' && project.status === 'rendering';
-                                const isDone = partData?.status === 'done';
+                                    // Enable Part 2 only if Part 1 is done
+                                    const isDisabled = partNum > 1 && prevPartData?.status !== 'done';
+                                    // Only show rendering if the part says so AND the global project is actually in rendering mode.
+                                    const isRendering = partData?.status === 'rendering' && project.status === 'rendering';
+                                    const isDone = partData?.status === 'done';
 
-                                return (
-                                    <div key={partNum} className="flex items-center gap-2">
-                                        <span className="text-[10px] text-stone-500 uppercase tracking-wider font-bold">Part {partNum}</span>
-                                        {isDone && partData?.url ? (
-                                            <a
-                                                href={partData.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs flex items-center gap-1"
-                                            >
-                                                <Download size={12} />
-                                                Download
-                                            </a>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleExportVideo(partNum)}
-                                                disabled={isDisabled || isRendering}
-                                                className={`px-3 py-1 rounded text-xs flex items-center gap-1 transition-colors ${isDisabled
-                                                    ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
-                                                    : isRendering
-                                                        ? 'bg-orange-900/50 text-orange-500 cursor-wait'
-                                                        : 'bg-orange-600 hover:bg-orange-700 text-white'
-                                                    }`}
-                                            >
-                                                {isRendering ? (
-                                                    <><Loader2 size={12} className="animate-spin" /> Rendering</>
-                                                ) : isDisabled ? (
-                                                    <><Download size={12} /> Locked</>
-                                                ) : (
-                                                    <><Download size={12} /> Export Part {partNum}</>
-                                                )}
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                    return (
+                                        <div key={partNum} className="flex items-center gap-1 bg-stone-900/50 p-1 rounded border border-white/5">
+                                            <span className="text-[10px] text-stone-500 font-bold px-1">P{partNum}</span>
+                                            {isDone && partData?.url ? (
+                                                <a
+                                                    href={partData.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] flex items-center gap-1"
+                                                >
+                                                    <Download size={10} />
+                                                </a>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleExportVideo(partNum)}
+                                                    disabled={isDisabled || isRendering}
+                                                    className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-colors ${isDisabled
+                                                            ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
+                                                            : isRendering
+                                                                ? 'bg-orange-900/50 text-orange-500 cursor-wait'
+                                                                : 'bg-orange-600 hover:bg-orange-700 text-white'
+                                                        }`}
+                                                    title={isDisabled ? "Complete previous part first" : isRendering ? "Rendering..." : "Export this part"}
+                                                >
+                                                    {isRendering ? (
+                                                        <Loader2 size={10} className="animate-spin" />
+                                                    ) : isDisabled ? (
+                                                        <span className="w-2.5 h-2.5 block bg-stone-700 rounded-full" />
+                                                    ) : (
+                                                        <Download size={10} />
+                                                    )}
+                                                    {isRendering ? '' : 'Export'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ) : project.video_url ? (
                         <a
