@@ -34,6 +34,15 @@ export type ProjectSettings = {
         transitionSound?: 'none' | 'camera_flash' | 'swoosh';
     };
     cameraMovements?: ('zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'pan_up' | 'pan_down' | 'static')[];
+    renderParts?: {
+        id: string; // unique ID for this part (e.g. part-1)
+        bucketName: string;
+        renderId: string;
+        status: 'rendering' | 'done' | 'error';
+        url?: string;
+        part: number; // 1-based index
+        frameCount: number;
+    }[];
 };
 
 export type SceneApi = {

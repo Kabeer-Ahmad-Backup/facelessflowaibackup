@@ -34,36 +34,78 @@ export async function POST(req: NextRequest) {
 
     if (body.type === 'success') {
         const { renderId, outBucket, outKey, inputProps } = body.payload;
-        // Construct the S3 URL (or CloudFront if configured)
-        // Default S3 URL: https://[bucket].s3.[region].amazonaws.com/[key]
         const region = process.env.REMOTION_AWS_REGION || 'us-east-1';
         const videoUrl = `https://${outBucket}.s3.${region}.amazonaws.com/${outKey}`;
-
-        // We need to find the projectId. Ideally it's passed in inputProps or customData.
-        // Let's assume inputProps has projectId or we parse it from the request if possible.
-        // IMPORTANT: In the trigger, pass projectId inside inputProps!
-        const projectId = inputProps.projectId;
-
-        if (projectId) {
-            await supabase
-                .from('projects')
-                .update({
-                    status: 'done',
-                    video_url: videoUrl
-                })
-                .eq('id', projectId);
-            console.log(`[Remotion Webhook] Project ${projectId} marked DONE.`);
-        }
-    } else if (body.type === 'error' || body.type === 'timeout') {
-        const { inputProps, errorMessage } = body.payload;
         const projectId = inputProps?.projectId;
 
         if (projectId) {
-            await supabase
-                .from('projects')
-                .update({ status: 'error' })
-                .eq('id', projectId);
-            console.error(`[Remotion Webhook] Project ${projectId} FAILED:`, errorMessage);
+            // Fetch project to check for multi-part
+            const { data: project } = await supabase.from('projects').select('*').eq('id', projectId).single();
+
+            if (project && project.settings && project.settings.renderParts) {
+                // MULTI-PART LOGIC
+                const parts = project.settings.renderParts;
+                const partIndex = parts.findIndex((p: any) => p.renderId === renderId);
+
+                if (partIndex >= 0) {
+                    parts[partIndex].status = 'done';
+                    parts[partIndex].url = videoUrl;
+
+                    // Check if all done
+                    const allDone = parts.every((p: any) => p.status === 'done');
+
+                    const updatePayload: any = {
+                        settings: { ...project.settings, renderParts: parts }
+                    };
+
+                    if (allDone) {
+                        updatePayload.status = 'done';
+                        // Maybe set main video_url to the first part? Or empty?
+                        // Frontend will handle checking parts.
+                    }
+
+                    await supabase.from('projects').update(updatePayload).eq('id', projectId);
+                    console.log(`[Remotion Webhook] Partial Render ${renderId} (Part ${parts[partIndex].part}) DONE.`);
+                }
+            } else {
+                // SINGLE PART LOGIC
+                await supabase
+                    .from('projects')
+                    .update({
+                        status: 'done',
+                        video_url: videoUrl
+                    })
+                    .eq('id', projectId);
+                console.log(`[Remotion Webhook] Project ${projectId} marked DONE.`);
+            }
+        }
+    } else if (body.type === 'error' || body.type === 'timeout') {
+        const { inputProps, errorMessage, renderId } = body.payload;
+        const projectId = inputProps?.projectId;
+
+        if (projectId) {
+            const { data: project } = await supabase.from('projects').select('*').eq('id', projectId).single();
+
+            if (project && project.settings && project.settings.renderParts) {
+                // MULTI-PART ERROR
+                const parts = project.settings.renderParts;
+                const partIndex = parts.findIndex((p: any) => p.renderId === renderId);
+                if (partIndex >= 0) {
+                    parts[partIndex].status = 'error';
+                    await supabase.from('projects').update({
+                        status: 'error',
+                        settings: { ...project.settings, renderParts: parts }
+                    }).eq('id', projectId);
+                }
+                console.error(`[Remotion Webhook] Partial Render ${renderId} FAILED:`, errorMessage);
+            } else {
+                // SINGLE PART ERROR
+                await supabase
+                    .from('projects')
+                    .update({ status: 'error' })
+                    .eq('id', projectId);
+                console.error(`[Remotion Webhook] Project ${projectId} FAILED:`, errorMessage);
+            }
         }
     }
 

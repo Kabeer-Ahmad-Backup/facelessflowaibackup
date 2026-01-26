@@ -31,7 +31,52 @@ export async function GET(
         return NextResponse.json({ progress: 0, status: 'error', error: 'Rendering failed' });
     }
 
-    // 2. Get renderId from settings
+    // 2. Check for Multi-Part Render
+    if ((project.settings as any)?.renderParts) {
+        const parts = (project.settings as any).renderParts;
+        let totalProgress = 0;
+        let framesRendered = 0;
+        let lambdasInvoked = 0;
+
+        // We process sequentially to avoid AWS rate limits if many parts
+        for (const part of parts) {
+            if (part.status === 'done') {
+                totalProgress += 1;
+            } else if (part.status === 'error') {
+                // If error, maybe count as 0 or handling differently? 
+                // Let's count as 0 to keep average low, or 1 if we consider it "finished" processing?
+                // Visual progress bar should probably reflect work done.
+                totalProgress += 0;
+            } else {
+                try {
+                    const progress = await getRenderProgress({
+                        renderId: part.renderId,
+                        bucketName: part.bucketName,
+                        functionName: process.env.REMOTION_AWS_FUNCTION_NAME!,
+                        region: (process.env.REMOTION_AWS_REGION as any) || region,
+                    });
+                    totalProgress += progress.overallProgress;
+                    framesRendered += progress.framesRendered || 0;
+                    lambdasInvoked += progress.lambdasInvoked || 0;
+                } catch (e) {
+                    console.error(`Error fetching progress for part ${part.part}:`, e);
+                }
+            }
+        }
+
+        const avgProgress = totalProgress / parts.length;
+
+        return NextResponse.json({
+            progress: avgProgress,
+            status: project.status,
+            details: {
+                framesRendered,
+                lambdasInvoked
+            }
+        });
+    }
+
+    // 3. Single Render Logic (Legacy)
     const renderId = (project.settings as any)?.renderId;
     const bucketName = (project.settings as any)?.bucketName || process.env.REMOTION_AWS_BUCKET;
 
@@ -53,10 +98,13 @@ export async function GET(
             // Construct video URL (S3)
             const videoUrl = `https://${bucketName}.s3.${region}.amazonaws.com/renders/${renderId}/out.mp4`;
 
-            await supabase.from('projects').update({
-                status: 'done',
-                video_url: videoUrl
-            }).eq('id', projectId);
+            // Only update if not already done (avoid race with webhook)
+            if (project.status !== 'done') {
+                await supabase.from('projects').update({
+                    status: 'done',
+                    video_url: videoUrl
+                }).eq('id', projectId);
+            }
 
             return NextResponse.json({
                 progress: 1,

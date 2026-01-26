@@ -406,7 +406,30 @@ export default function ProjectPage() {
                         <LayoutList size={16} />
                         {showScript ? 'Hide' : 'Show'} Script
                     </button>
-                    {project.video_url ? (
+                    {project.settings.renderParts && project.settings.renderParts.length > 0 ? (
+                        <div className="flex flex-col gap-1 items-end">
+                            {project.settings.renderParts.map((part) => (
+                                <div key={part.id} className="flex items-center gap-2">
+                                    <span className="text-[10px] text-stone-500 uppercase tracking-wider font-bold">Part {part.part}</span>
+                                    {part.status === 'done' && part.url ? (
+                                        <a
+                                            href={part.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs flex items-center gap-1"
+                                        >
+                                            <Download size={12} />
+                                            Download
+                                        </a>
+                                    ) : part.status === 'error' ? (
+                                        <span className="text-red-500 text-xs flex items-center gap-1"><AlertCircle size={12} /> Failed</span>
+                                    ) : (
+                                        <span className="text-orange-500 text-xs flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Rendering</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : project.video_url ? (
                         <a
                             href={project.video_url}
                             target="_blank"
@@ -426,12 +449,11 @@ export default function ProjectPage() {
                                 <div className="flex flex-col items-start text-xs">
                                     <div className="flex items-center gap-2">
                                         <Loader2 size={16} className="animate-spin" />
-                                        <span>Rendering on AWS Lambda...</span>
+                                        <span>Rendering...</span>
                                     </div>
                                     {renderProgress && renderProgress.progress > 0 && (
                                         <span className="text-white/70 ml-6 text-[10px]">
                                             {Math.round(renderProgress.progress * 100)}%
-                                            {renderProgress.details?.framesRendered ? ` (${renderProgress.details.framesRendered} frames)` : ''}
                                         </span>
                                     )}
                                 </div>
