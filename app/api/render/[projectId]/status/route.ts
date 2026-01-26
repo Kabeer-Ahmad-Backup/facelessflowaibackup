@@ -51,7 +51,11 @@ export async function GET(
                 totalProgress += 1;
             } else if (part.status === 'error') {
                 partProgress = 0;
-                // If error, count as 0
+            } else if (!part.renderId && part.status === 'rendering') {
+                // ZOMBIE CHECK: Marked as rendering but no renderId exists? Fail it.
+                part.status = 'error';
+                partStatus = 'error';
+                hasUpdates = true;
             } else if (part.renderId) {
                 try {
                     const progress = await getRenderProgress({
@@ -81,6 +85,10 @@ export async function GET(
 
                 } catch (e) {
                     console.error(`Error fetching progress for part ${part.part}:`, e);
+                    // If we can't fetch progress (e.g. job expired/invalid), we must mark it as error
+                    part.status = 'error';
+                    partStatus = 'error';
+                    hasUpdates = true;
                 }
             }
 
@@ -88,7 +96,8 @@ export async function GET(
                 part: part.part,
                 status: partStatus,
                 progress: partProgress,
-                url: part.url
+                url: part.url,
+                renderId: part.renderId // CRITICAL: Persist renderId to frontend
             });
         }
 

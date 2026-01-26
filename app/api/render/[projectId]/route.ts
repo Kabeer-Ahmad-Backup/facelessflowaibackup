@@ -63,6 +63,19 @@ export async function POST(
         const MAX_SCENES = 200; // Resetting to 200 for stability (300 scenes = ~63k frames, causing timeouts)
         const webhookSecret = process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret';
 
+        // REUSE BUCKET LOGIC:
+        // If we have existing parts that successfully rendered (or even started), they used a bucket.
+        // Use that bucket if available to avoid "Finding bucket..." DNS flakes or creation overhead.
+        let targetBucketName = process.env.REMOTION_AWS_BUCKET;
+
+        if (!targetBucketName && project.settings?.renderParts) {
+            const existingPartWithBucket = project.settings.renderParts.find((p: any) => p.bucketName);
+            if (existingPartWithBucket) {
+                targetBucketName = existingPartWithBucket.bucketName;
+                console.log(`[Render API] Reusing existing bucket: ${targetBucketName}`);
+            }
+        }
+
         // --- LOGIC BRANCHING ---
 
         let scenesToRender = scenes;
@@ -105,6 +118,8 @@ export async function POST(
             functionName,
             serveUrl,
             composition: 'MirzaMain',
+            // @ts-ignore - bucketName is valid but types might be strict
+            bucketName: targetBucketName,
             inputProps: {
                 scenes: scenesToRender,
                 settings: project.settings,
@@ -134,10 +149,30 @@ export async function POST(
             // Update specific part in renderParts array
             // We need to fetch latest project settings again to avoid overwriting race conditions?
             // For now, use the one we fetched (low concurrency assumed).
-            // 1. Ensure array exists
+            // 1. Ensure array exists and is fully initialized for robustness
             let currentParts = project.settings.renderParts || [];
+            const totalParts = Math.ceil(scenes.length / MAX_SCENES);
 
-            // 2. Setup new entry
+            // INITIALIZATION: If parts array is empty or length mismatch, initialize valid structure
+            if (currentParts.length === 0 || currentParts.length !== totalParts) {
+                console.log(`[Render API] Initializing ${totalParts} parts for split render.`);
+                currentParts = Array.from({ length: totalParts }).map((_, idx) => {
+                    // Try to preserve existing if we are resizing? Or just overwrite?
+                    // Safe approach: check if existing part data is compatible
+                    const pNum = idx + 1;
+                    const existing = (project.settings.renderParts || []).find((p: any) => p.part === pNum);
+                    return existing || {
+                        id: `part-${pNum}`,
+                        part: pNum,
+                        status: 'idle',
+                        bucketName: undefined,
+                        renderId: undefined,
+                        url: undefined
+                    };
+                });
+            }
+
+            // 2. Setup new entry for the ACTIVE part
             const newPartEntry = {
                 id: `part-${partNumber}`,
                 bucketName,
@@ -147,18 +182,20 @@ export async function POST(
                 frameCount: totalFrames
             };
 
-            // 3. Update or Append
-            const existingIndex = currentParts.findIndex((p: any) => p.part === partNumber);
-
-            let updatedParts;
-            if (existingIndex >= 0) {
-                // Replace existing
-                updatedParts = [...currentParts];
-                updatedParts[existingIndex] = newPartEntry;
+            // 3. Update the specific index
+            const partIndexInArray = partNumber - 1; // 1-based to 0-based
+            if (currentParts[partIndexInArray]) {
+                currentParts[partIndexInArray] = {
+                    ...currentParts[partIndexInArray],
+                    ...newPartEntry
+                };
             } else {
-                // Append and Sort
-                updatedParts = [...currentParts, newPartEntry].sort((a: any, b: any) => a.part - b.part);
+                // Fallback (shouldn't happen with init above)
+                currentParts.push(newPartEntry);
             }
+
+            // Sort to be safe
+            const updatedParts = currentParts.sort((a: any, b: any) => a.part - b.part);
 
             await supabase.from('projects').update({
                 status: 'rendering',

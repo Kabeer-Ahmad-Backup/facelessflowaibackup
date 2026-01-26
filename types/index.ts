@@ -34,14 +34,20 @@ export type ProjectSettings = {
         transitionSound?: 'none' | 'camera_flash' | 'swoosh';
     };
     cameraMovements?: ('zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'pan_up' | 'pan_down' | 'static')[];
+
+    // Split Rendering Pipeline
+    renderMode?: 'single' | 'split';
+    totalParts?: number;
     renderParts?: {
         id: string; // unique ID for this part (e.g. part-1)
-        bucketName: string;
-        renderId: string;
-        status: 'rendering' | 'done' | 'error';
-        url?: string;
         part: number; // 1-based index
-        frameCount: number;
+        status: 'idle' | 'rendering' | 'done' | 'error';
+        bucketName?: string;
+        renderId?: string;
+        url?: string;
+        progress?: number; // 0-1
+        frameCount?: number;
+        error?: string;
     }[];
 };
 
