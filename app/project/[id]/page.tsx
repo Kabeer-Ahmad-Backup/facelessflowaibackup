@@ -104,6 +104,17 @@ export default function ProjectPage() {
                         setRenderProgress(data);
                     }
 
+                    // Update project parts status live
+                    if (data.parts) {
+                        setProject((prev: any) => ({
+                            ...prev,
+                            settings: {
+                                ...(prev.settings || {}),
+                                renderParts: data.parts
+                            }
+                        }));
+                    }
+
                     // Check for status change (done/error/ready/draft)
                     // We stop polling if the status is anything other than 'rendering'
                     if (data.status !== 'rendering') {
@@ -458,16 +469,21 @@ export default function ProjectPage() {
                                                 <button
                                                     onClick={() => handleExportVideo(partNum)}
                                                     disabled={isDisabled || isRendering}
-                                                    className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-colors ${isDisabled
-                                                            ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
-                                                            : isRendering
-                                                                ? 'bg-orange-900/50 text-orange-500 cursor-wait'
-                                                                : 'bg-orange-600 hover:bg-orange-700 text-white'
+                                                    className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-colors ${isRendering
+                                                        ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
+                                                        : isDisabled
+                                                            ? 'bg-stone-800 text-stone-600 cursor-not-allowed border border-white/5'
+                                                            : 'bg-stone-800 hover:bg-stone-700 text-stone-300 border border-white/10'
                                                         }`}
                                                     title={isDisabled ? "Complete previous part first" : isRendering ? "Rendering..." : "Export this part"}
                                                 >
                                                     {isRendering ? (
-                                                        <Loader2 size={10} className="animate-spin" />
+                                                        <div className="flex items-center gap-1">
+                                                            <Loader2 className="animate-spin" size={10} />
+                                                            {(partData as any)?.progress > 0 && (
+                                                                <span className="tabular-nums font-mono">{Math.round((partData as any).progress * 100)}%</span>
+                                                            )}
+                                                        </div>
                                                     ) : isDisabled ? (
                                                         <span className="w-2.5 h-2.5 block bg-stone-700 rounded-full" />
                                                     ) : (

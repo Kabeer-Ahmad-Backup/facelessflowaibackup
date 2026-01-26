@@ -114,10 +114,11 @@ export async function POST(
             },
             codec: 'h264',
             framesPerLambda: dynamicFramesPerLambda,
-            timeoutInSeconds: 900,
+            timeoutInMilliseconds: 900000,
+            // @ts-ignore - explicitly allowed by Remotion Lambda but types might differ
+            delayRenderTimeoutInMilliSeconds: 60000,
             chromiumOptions: {
-                // @ts-ignore - Valid in runtime, type definition might be outdated
-                delayRenderTimeoutInMilliSeconds: 60000,
+                // ... other options if needed, or empty
             },
             downloadBehavior: { type: 'download', fileName: null },
             webhook: {
