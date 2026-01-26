@@ -10,7 +10,11 @@ type Props = {
 export const Scene: React.FC<Props> = ({ scene, settings }) => {
     const frame = useCurrentFrame();
     const { fps, width, height } = useVideoConfig();
-    const durationFrames = Math.ceil((scene.duration || 5) * fps);
+
+    let d = scene.duration || 5;
+    if (d > 300) { d = d / 1000; }
+
+    const durationFrames = Math.ceil(d * fps);
 
     // Transition duration (in frames) - 0.3 seconds
     const transitionDuration = fps * 0.3;

@@ -44,7 +44,13 @@ export const RemotionRoot: React.FC = () => {
                 calculateMetadata={({ props }) => {
                     // Calculate total duration based on individual scene frames to prevent rounding errors
                     const totalFrames = props.scenes.reduce((acc, scene) => {
-                        return acc + Math.ceil((scene.duration || 5) * 30);
+                        let d = scene.duration || 5;
+                        // Heuristic check: if duration > 300 (5 mins), assume it's milliseconds or error, so divide by 1000.
+                        // Most scenes are < 1 min.
+                        if (d > 300) {
+                            d = d / 1000;
+                        }
+                        return acc + Math.ceil(d * 30);
                     }, 0);
 
                     // Calculate dimensions based on aspect ratio
