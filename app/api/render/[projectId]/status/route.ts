@@ -94,13 +94,52 @@ export async function GET(
 
         // If any parts updated their status, save to DB
         if (hasUpdates) {
+            // CRITICAL: Re-fetch latest project settings to avoid race conditions with 'Export' actions
+            // that might have added/updated parts while we were polling AWS.
+            const { data: latestProject } = await supabase
+                .from('projects')
+                .select('settings')
+                .eq('id', projectId)
+                .single();
+
+            const currentLatestParts = (latestProject?.settings as any)?.renderParts || parts;
+
+            // Merge our updates (progress/status) into the latest parts array.
+            // We use 'parts' (our local processed list) as the source of truth for *progress*,
+            // but we must respect *newly added* parts or changed statuses from the user side if possible.
+            // Actually, simpler: just update the specific parts we know about in the latest array.
+
+            const mergedParts = currentLatestParts.map((latestPart: any) => {
+                // Find the updated info for this part from our polling loop
+                const updateFromPoll = parts.find((p: any) => p.part === latestPart.part);
+                if (updateFromPoll) {
+                    // If we have an update, use it.
+                    // BUT, if the latestPart status is 'rendering' and our poll says 'idle', that's a conflict.
+                    // However, we only updated 'part' in the loop if we found a renderId.
+                    // If our loop calculated a status change (e.g. to done or error), we should persist it.
+                    // If our loop kept it as 'rendering', we persist 'rendering'.
+                    // The only danger is if we persist 'idle' over 'rendering'.
+
+                    // Our 'parts' array in the loop started from 'project.settings.renderParts'.
+                    // So if we preserve the keys, we are good.
+
+                    return {
+                        ...latestPart, // Keep any new fields
+                        status: updateFromPoll.status,
+                        progress: updateFromPoll.progress || latestPart.progress,
+                        url: updateFromPoll.url || latestPart.url
+                    };
+                }
+                return latestPart;
+            });
+
             const newSettings = {
-                ...project.settings as object,
-                renderParts: parts
+                ...latestProject?.settings as object,
+                renderParts: mergedParts
             };
 
             // Check if ALL parts are done to update global status
-            const allDone = parts.every((p: any) => p.status === 'done');
+            const allDone = mergedParts.every((p: any) => p.status === 'done');
 
             const updatePayload: any = {
                 settings: newSettings
@@ -108,10 +147,6 @@ export async function GET(
 
             if (allDone) {
                 updatePayload.status = 'done';
-                // Maybe combine videos or just point to something? 
-                // For now, if split, we might just leave video_url as empty or point to playlist?
-                // But the prompt wants per-part downloads, so maybe we don't set global video_url.
-                // Or we set status to 'done'.
             }
 
             await supabase.from('projects').update(updatePayload).eq('id', projectId);

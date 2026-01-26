@@ -458,19 +458,20 @@ export default function ProjectPage() {
                                     const partNum = idx + 1;
                                     const partData = project.settings.renderParts?.find((p: any) => p.part === partNum);
 
-                                    // Independent Export: No disable logic based on previous parts
-                                    const isDisabled = false;
+                                    // 1. URL Existence (Top Priority)
+                                    const hasUrl = Boolean(partData?.url);
 
-                                    // Only show rendering if the part says so AND the global project is actually in rendering mode.
-                                    const isRendering = partData?.status === 'rendering' && project.status === 'rendering';
-                                    const isDone = partData?.status === 'done';
+                                    // 2. Formatting Check (Fallback is status)
+                                    // Use local logic strictly: valid status === rendering implies rendering
+                                    // AND checks if we actually have a renderId (job exists)
+                                    const isRendering = !hasUrl && partData?.status === 'rendering' && Boolean(partData?.renderId);
 
                                     return (
                                         <div key={partNum} className="flex items-center gap-1 bg-stone-900/50 p-1 rounded border border-white/5">
                                             <span className="text-[10px] text-stone-500 font-bold px-1">P{partNum}</span>
-                                            {isDone && partData?.url ? (
+                                            {hasUrl ? (
                                                 <a
-                                                    href={partData.url}
+                                                    href={partData?.url} // Fixed TS error
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] flex items-center gap-1"
@@ -494,10 +495,8 @@ export default function ProjectPage() {
                                                                 <span className="tabular-nums font-mono">{Math.round((partData as any).progress * 100)}%</span>
                                                             )}
                                                         </div>
-                                                    ) : isDisabled ? (
-                                                        <span className="w-2.5 h-2.5 block bg-stone-700 rounded-full" />
                                                     ) : (
-                                                        <Download size={10} />
+                                                        <Play size={10} />
                                                     )}
                                                     {isRendering ? '' : 'Export'}
                                                 </button>
@@ -548,18 +547,28 @@ export default function ProjectPage() {
                             <button
                                 onClick={async () => {
                                     if (confirm("Reset project status? This will cancel active jobs and allow you to try again.")) {
-                                        await supabase.from('projects').update({
+                                        // 1. Reset Global Status
+                                        const { error } = await supabase.from('projects').update({
                                             status: 'ready',
-                                            // Optional: reset renderParts too if completely stuck?
-                                            // Let's just reset status first. If split, they can try again.
-                                            // Actually, for split render, if one part is stuck, we might want to clear the 'rendering' status of that part?
-                                            // The simplest full reset is needed here.
+                                            // 2. Deep Reset: Set all parts to 'error' (or 'ready' state logic)
                                             settings: {
                                                 ...project.settings,
-                                                renderParts: (project.settings.renderParts || []).map((p: any) => ({ ...p, status: 'error' }))
+                                                renderParts: (project.settings.renderParts || []).map((p: any) => ({
+                                                    ...p,
+                                                    status: 'error',
+                                                    progress: 0,
+                                                    // keep url if exists? maybe, or clear it if we assume it's broken?
+                                                    // User might want to re-render. Let's keep URL just in case, but status is error.
+                                                }))
                                             }
                                         }).eq('id', projectId);
+
+                                        if (error) toast.error("Failed to reset");
+                                        else toast.success("Status reset. You can now try again.");
+
                                         setRendering(false);
+                                        // window.location.reload(); // Let Supabase subscription handle update or user manual refresh
+                                        // Actually manual reload is safer for full state sync
                                         window.location.reload();
                                     }
                                 }}

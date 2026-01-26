@@ -134,11 +134,10 @@ export async function POST(
             // Update specific part in renderParts array
             // We need to fetch latest project settings again to avoid overwriting race conditions?
             // For now, use the one we fetched (low concurrency assumed).
-            const currentParts = project.settings.renderParts || [];
+            // 1. Ensure array exists
+            let currentParts = project.settings.renderParts || [];
 
-            // Remove existing entry for this part if exists
-            const otherParts = currentParts.filter((p: any) => p.part !== partNumber);
-
+            // 2. Setup new entry
             const newPartEntry = {
                 id: `part-${partNumber}`,
                 bucketName,
@@ -148,7 +147,18 @@ export async function POST(
                 frameCount: totalFrames
             };
 
-            const updatedParts = [...otherParts, newPartEntry].sort((a: any, b: any) => a.part - b.part);
+            // 3. Update or Append
+            const existingIndex = currentParts.findIndex((p: any) => p.part === partNumber);
+
+            let updatedParts;
+            if (existingIndex >= 0) {
+                // Replace existing
+                updatedParts = [...currentParts];
+                updatedParts[existingIndex] = newPartEntry;
+            } else {
+                // Append and Sort
+                updatedParts = [...currentParts, newPartEntry].sort((a: any, b: any) => a.part - b.part);
+            }
 
             await supabase.from('projects').update({
                 status: 'rendering',
