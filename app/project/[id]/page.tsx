@@ -94,7 +94,10 @@ export default function ProjectPage() {
         let progressInterval: NodeJS.Timeout;
         if (project?.status === 'rendering' || rendering) {
             setRendering(true);
-            setShowRenderModal(true);
+            // Only show modal for single renders, not split ones (where we have inline UI)
+            if (scenes.length <= 200) {
+                setShowRenderModal(true);
+            }
             progressInterval = setInterval(async () => {
                 try {
                     const res = await fetch(`/api/render/${projectId}/status`, { cache: 'no-store' });
