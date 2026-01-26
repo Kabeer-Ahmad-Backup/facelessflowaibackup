@@ -445,10 +445,10 @@ export default function ProjectPage() {
                                                 onClick={() => handleExportVideo(partNum)}
                                                 disabled={isDisabled || isRendering}
                                                 className={`px-3 py-1 rounded text-xs flex items-center gap-1 transition-colors ${isDisabled
-                                                        ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
-                                                        : isRendering
-                                                            ? 'bg-orange-900/50 text-orange-500 cursor-wait'
-                                                            : 'bg-orange-600 hover:bg-orange-700 text-white'
+                                                    ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
+                                                    : isRendering
+                                                        ? 'bg-orange-900/50 text-orange-500 cursor-wait'
+                                                        : 'bg-orange-600 hover:bg-orange-700 text-white'
                                                     }`}
                                             >
                                                 {isRendering ? (
@@ -500,13 +500,40 @@ export default function ProjectPage() {
                             )}
                         </button>
                     )}
-                    <div className={`px-3 py-1.5 rounded-full text-xs font-mono border ${project.status === 'done' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
-                        project.status === 'generating' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' :
-                            project.status === 'rendering' ? 'bg-purple-500/10 border-purple-500/20 text-purple-500' :
-                                project.status === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
-                                    'bg-stone-800 border-stone-700 text-stone-500'
-                        }`}>
-                        {project.status.toUpperCase()}
+                    <div className="flex items-center gap-2">
+                        {(project.status === 'rendering' || project.status === 'error') && (
+                            <button
+                                onClick={async () => {
+                                    if (confirm("Reset project status? This will cancel active jobs and allow you to try again.")) {
+                                        await supabase.from('projects').update({
+                                            status: 'ready',
+                                            // Optional: reset renderParts too if completely stuck?
+                                            // Let's just reset status first. If split, they can try again.
+                                            // Actually, for split render, if one part is stuck, we might want to clear the 'rendering' status of that part?
+                                            // The simplest full reset is needed here.
+                                            settings: {
+                                                ...project.settings,
+                                                renderParts: (project.settings.renderParts || []).map((p: any) => ({ ...p, status: 'error' }))
+                                            }
+                                        }).eq('id', projectId);
+                                        setRendering(false);
+                                        window.location.reload();
+                                    }
+                                }}
+                                className="p-1.5 bg-stone-800 hover:bg-stone-700 text-stone-400 rounded-full transition-colors"
+                                title="Reset Status"
+                            >
+                                <RefreshCw size={12} />
+                            </button>
+                        )}
+                        <div className={`px-3 py-1.5 rounded-full text-xs font-mono border ${project.status === 'done' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
+                            project.status === 'generating' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' :
+                                project.status === 'rendering' ? 'bg-purple-500/10 border-purple-500/20 text-purple-500' :
+                                    project.status === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                                        'bg-stone-800 border-stone-700 text-stone-500'
+                            }`}>
+                            {project.status.toUpperCase()}
+                        </div>
                     </div>
                 </div>
             </header>

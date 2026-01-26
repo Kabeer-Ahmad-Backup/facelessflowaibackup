@@ -130,6 +130,11 @@ export async function GET(
         });
     } catch (e: any) {
         console.error("Error fetching progress:", e);
-        return NextResponse.json({ progress: 0, status: project.status, error: e.message });
+
+        // If the job is lost/failed, we should stop the polling loop
+        // We update the project status to error
+        await supabase.from('projects').update({ status: 'error' }).eq('id', projectId);
+
+        return NextResponse.json({ progress: 0, status: 'error', error: e.message });
     }
 }
