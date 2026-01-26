@@ -440,6 +440,15 @@ export default function ProjectPage() {
                         <LayoutList size={16} />
                         {showScript ? 'Hide' : 'Show'} Script
                     </button>
+                    {rendering && !showRenderModal && (
+                        <button
+                            onClick={() => setShowRenderModal(true)}
+                            className="px-4 py-2 bg-stone-800 hover:bg-stone-700 text-stone-200 rounded-lg transition-colors flex items-center gap-2 text-sm border border-stone-700"
+                        >
+                            <Loader2 size={16} className="animate-spin" />
+                            Show Progress
+                        </button>
+                    )}
                     {/* SPLIT EXPORT UI */}
                     {scenes.length > 200 ? (
                         <div className="flex flex-col gap-1 items-end">
