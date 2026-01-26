@@ -104,17 +104,30 @@ export default function ProjectPage() {
                         setRenderProgress(data);
                     }
 
-                    // Check for status change (done/error)
-                    if (data.status === 'done' || data.status === 'error') {
+                    // Check for status change (done/error/ready/draft)
+                    // We stop polling if the status is anything other than 'rendering'
+                    if (data.status !== 'rendering') {
                         clearInterval(progressInterval);
 
                         // Update local project state immediately
                         setProject((prev: any) => ({
                             ...prev,
                             status: data.status,
-                            video_url: data.videoUrl || prev?.video_url
+                            video_url: data.videoUrl || prev?.video_url,
+                            // If we stopped rendering but it's not done, we should probably ensure renderParts are updated too? 
+                            // The API returns 'status' and 'progress'. It doesn't allow full project payload in this endpoint usually.
+                            // But usually fetching project again is safer? 
+                            // For now, updating status is enough to stop the spinner.
                         }));
                         setRendering(false);
+                        // Also hide modal if it's not error
+                        if (data.status === 'done') {
+                            // keep modal? or close? existing logic kept it open or relied on user.
+                            // Actually existing logic didn't explicitly close modal, just setRendering(false).
+                        } else if (data.status !== 'error') {
+                            // If it became ready/draft (reset), close modal
+                            setShowRenderModal(false);
+                        }
                     }
                 } catch (e) {
                     console.error("Polling error", e);
@@ -424,7 +437,9 @@ export default function ProjectPage() {
 
                                 // Enable Part 2 only if Part 1 is done
                                 const isDisabled = partNum > 1 && prevPartData?.status !== 'done';
-                                const isRendering = partData?.status === 'rendering';
+                                // Only show rendering if the part says so AND the global project is actually in rendering mode.
+                                // If project was reset to 'draft'/'ready', any stuck 'rendering' flags in parts should be ignored.
+                                const isRendering = partData?.status === 'rendering' && project.status === 'rendering';
                                 const isDone = partData?.status === 'done';
 
                                 return (

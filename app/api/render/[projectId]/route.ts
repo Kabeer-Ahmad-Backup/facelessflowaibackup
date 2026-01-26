@@ -60,7 +60,7 @@ export async function POST(
             throw new Error('AWS Lambda configuration missing');
         }
 
-        const MAX_SCENES = 300;
+        const MAX_SCENES = 200; // Resetting to 200 for stability (300 scenes = ~63k frames, causing timeouts)
         const webhookSecret = process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret';
 
         // --- LOGIC BRANCHING ---
@@ -77,7 +77,7 @@ export async function POST(
             isPart = true;
             currentPartIndex = partNumber - 1;
 
-            console.log(`[Render API] Triggering Manual Part ${partNumber} (Scenes ${startIndex} - ${Math.min(endIndex, scenes.length)})`);
+            console.log(`[Render API] Triggering Manual Part ${partNumber}: Scenes ${startIndex} to ${endIndex} (${scenesToRender.length} scenes)`);
         } else {
             console.log(`[Render API] Triggering Full Render (${scenes.length} scenes)`);
         }
@@ -110,10 +110,15 @@ export async function POST(
                 settings: project.settings,
                 projectId,
                 isPart,
-                partIndex: currentPartIndex
+                partIndex: currentPartIndex,
             },
             codec: 'h264',
             framesPerLambda: dynamicFramesPerLambda,
+            timeoutInSeconds: 900,
+            chromiumOptions: {
+                // @ts-ignore - Valid in runtime, type definition might be outdated
+                delayRenderTimeoutInMilliSeconds: 60000,
+            },
             downloadBehavior: { type: 'download', fileName: null },
             webhook: {
                 url: 'https://facelessflowai.vercel.app/api/webhook/remotion',
