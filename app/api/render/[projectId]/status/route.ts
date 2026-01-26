@@ -87,7 +87,8 @@ export async function GET(
             partsDetails.push({
                 part: part.part,
                 status: partStatus,
-                progress: partProgress
+                progress: partProgress,
+                url: part.url
             });
         }
 
