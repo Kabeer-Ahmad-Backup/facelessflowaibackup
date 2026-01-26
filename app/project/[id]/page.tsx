@@ -339,17 +339,23 @@ export default function ProjectPage() {
         }
     };
 
-    const handleExportVideo = async () => {
+    const handleExportVideo = async (part?: number) => {
         if (!project) return;
-        setRendering(true);
-        setShowRenderModal(true);
 
-        // Optimistic Update
-        setProject(prev => prev ? ({ ...prev, status: 'rendering' }) : null);
+        // Optimistic update for UI state (local only, real update comes from API/polling)
+        // If part is specific, we might track its local loading state if needed, 
+        // but for now relying on global 'rendering' or quick polling is fine.
+        // Actually, let's set 'rendering' to true to show immediate feedback.
+        setRendering(true);
+        if (!part) setShowRenderModal(true);
 
         try {
-            // Call API route to trigger async render
-            const response = await fetch(`/api/render/${projectId}`, { method: 'GET' });
+            // Call API route to trigger async render (POST for parts)
+            const response = await fetch(`/api/render/${projectId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ part })
+            });
 
             if (!response.ok) {
                 let errorMsg = 'Export failed';
@@ -364,14 +370,15 @@ export default function ProjectPage() {
             }
 
             // Success - just notify user
-            toast.success("Rendering started! This may take a few minutes. You can close this tab or wait here.");
-            toast.info("The 'Download Video' button will appear when it's ready.");
+            toast.success(part ? `Rendering Part ${part} started!` : "Rendering started!");
+
+            // Force reload project to get updated renderParts status immediate
+            const { data: proj } = await supabase.from('projects').select('*').eq('id', projectId).single();
+            if (proj) setProject(proj);
 
         } catch (e: any) {
             toast.error(`Export error: ${e.message}`);
             setRendering(false);
-            // Revert optimistic update on error
-            setProject(prev => prev ? ({ ...prev, status: 'ready' as any }) : null);
         }
     };
 
@@ -406,28 +413,56 @@ export default function ProjectPage() {
                         <LayoutList size={16} />
                         {showScript ? 'Hide' : 'Show'} Script
                     </button>
-                    {project.settings.renderParts && project.settings.renderParts.length > 0 ? (
-                        <div className="flex flex-col gap-1 items-end">
-                            {project.settings.renderParts.map((part) => (
-                                <div key={part.id} className="flex items-center gap-2">
-                                    <span className="text-[10px] text-stone-500 uppercase tracking-wider font-bold">Part {part.part}</span>
-                                    {part.status === 'done' && part.url ? (
-                                        <a
-                                            href={part.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs flex items-center gap-1"
-                                        >
-                                            <Download size={12} />
-                                            Download
-                                        </a>
-                                    ) : part.status === 'error' ? (
-                                        <span className="text-red-500 text-xs flex items-center gap-1"><AlertCircle size={12} /> Failed</span>
-                                    ) : (
-                                        <span className="text-orange-500 text-xs flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Rendering</span>
-                                    )}
-                                </div>
-                            ))}
+                    {/* SPLIT EXPORT UI */}
+                    {scenes.length > 300 ? (
+                        <div className="flex flex-col gap-2 items-end">
+                            <span className="text-[10px] text-stone-500 font-mono">Large Project ({scenes.length} Scenes) - Multi-Part Export</span>
+                            {Array.from({ length: Math.ceil(scenes.length / 300) }).map((_, idx) => {
+                                const partNum = idx + 1;
+                                const partData = project.settings.renderParts?.find((p: any) => p.part === partNum);
+                                const prevPartData = partNum > 1 ? project.settings.renderParts?.find((p: any) => p.part === partNum - 1) : null;
+
+                                // Enable Part 2 only if Part 1 is done
+                                const isDisabled = partNum > 1 && prevPartData?.status !== 'done';
+                                const isRendering = partData?.status === 'rendering';
+                                const isDone = partData?.status === 'done';
+
+                                return (
+                                    <div key={partNum} className="flex items-center gap-2">
+                                        <span className="text-[10px] text-stone-500 uppercase tracking-wider font-bold">Part {partNum}</span>
+                                        {isDone && partData?.url ? (
+                                            <a
+                                                href={partData.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs flex items-center gap-1"
+                                            >
+                                                <Download size={12} />
+                                                Download
+                                            </a>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleExportVideo(partNum)}
+                                                disabled={isDisabled || isRendering}
+                                                className={`px-3 py-1 rounded text-xs flex items-center gap-1 transition-colors ${isDisabled
+                                                        ? 'bg-stone-800 text-stone-600 cursor-not-allowed'
+                                                        : isRendering
+                                                            ? 'bg-orange-900/50 text-orange-500 cursor-wait'
+                                                            : 'bg-orange-600 hover:bg-orange-700 text-white'
+                                                    }`}
+                                            >
+                                                {isRendering ? (
+                                                    <><Loader2 size={12} className="animate-spin" /> Rendering</>
+                                                ) : isDisabled ? (
+                                                    <><Download size={12} /> Locked</>
+                                                ) : (
+                                                    <><Download size={12} /> Export Part {partNum}</>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : project.video_url ? (
                         <a
@@ -441,7 +476,7 @@ export default function ProjectPage() {
                         </a>
                     ) : (
                         <button
-                            onClick={handleExportVideo}
+                            onClick={() => handleExportVideo()}
                             disabled={rendering || project.status === 'rendering' || scenes.filter(s => s.status === 'ready').length === 0}
                             className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
                         >
