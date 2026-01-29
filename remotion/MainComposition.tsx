@@ -28,7 +28,7 @@ export const MainComposition: React.FC<Props> = ({ scenes, settings }) => {
         <AbsoluteFill className="bg-black">
             <Series>
                 {settings.disclaimerEnabled && (
-                    <Series.Sequence durationInFrames={150}> {/* Assumes 5s duration (30fps) - Adjust if needed or use getVideoMetadata */}
+                    <Series.Sequence durationInFrames={45}> {/* 1.5s duration */}
                         <AbsoluteFill className="bg-black flex items-center justify-center">
                             {/* Use staticFile for safe resolution of public assets in Remotion */}
                             <Video src={staticFile("Disclaimer.mp4")} />
