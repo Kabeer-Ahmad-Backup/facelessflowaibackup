@@ -277,7 +277,7 @@ export async function generateRunwareImage(prompt: string, projectId: string, sc
             // For custom models on Runware, it's often passed via specific parameters or LoRA logic. 
             // If this is a direct reference image feature:
             ...(effectiveReferenceImageId ? {
-                seedImage: effectiveReferenceImageId
+                referenceImages: [effectiveReferenceImageId]
             } : {})
         });
 
