@@ -807,6 +807,51 @@ export default function ProjectPage() {
                 {/* CENTER: Player */}
                 <div className="flex-1 bg-black/40 flex flex-col">
                     <div className="bg-stone-900/95 border-b border-white/10 p-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+                        {/* VISUAL STYLE SETTINGS */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-stone-500 whitespace-nowrap">Style:</span>
+                            <select
+                                value={project.settings.visualStyle}
+                                onChange={(e) => {
+                                    const newStyle = e.target.value as any;
+                                    const updates: any = { visualStyle: newStyle };
+                                    // Auto-select Runware for Reference Image
+                                    if (newStyle === 'reference_image') {
+                                        updates.imageModel = 'runware';
+                                    }
+                                    handleUpdateSettings(updates);
+                                }}
+                                className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1 max-w-[120px]"
+                            >
+                                <option value="zen">Zen</option>
+                                <option value="normal">Cinematic</option>
+                                <option value="stick">Stick Figure</option>
+                                <option value="reference_image">Reference Character</option>
+                                <option value="health">Health</option>
+                                <option value="cartoon">Cartoon</option>
+                                <option value="art">Pop Art</option>
+                                <option value="clean_illustration">Clean Illustration</option>
+                                <option value="stock_natural">Stock Natural</option>
+                                <option value="stock_vector">Stock Vector</option>
+                                <option value="stock_art">Stock Art</option>
+                            </select>
+
+                            {project.settings.visualStyle === 'reference_image' && (
+                                <select
+                                    value={project.settings.referenceCharacter || 'grandpa'}
+                                    onChange={(e) => handleUpdateSettings({ referenceCharacter: e.target.value as any })}
+                                    className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
+                                >
+                                    <option value="grandpa">Grandpa</option>
+                                    <option value="grandma">Grandma</option>
+                                    <option value="james">James</option>
+                                    <option value="dr_sticky">Dr. Sticky</option>
+                                </select>
+                            )}
+                        </div>
+
+                        <div className="h-6 w-px bg-white/10"></div>
+
                         <span className="text-xs font-bold uppercase tracking-wider text-stone-500 whitespace-nowrap">Caption Settings:</span>
 
                         {/* Caption Toggle - Improved Styling */}

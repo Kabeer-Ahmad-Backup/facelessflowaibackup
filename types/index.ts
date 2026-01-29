@@ -10,7 +10,8 @@ export type ProjectApi = {
 
 export type ProjectSettings = {
     aspectRatio: '16:9' | '9:16' | '1:1';
-    visualStyle: 'zen' | 'normal' | 'stick' | 'health' | 'cartoon' | 'art' | 'stock_natural' | 'clean_illustration' | 'stock_vector' | 'stock_art';
+    visualStyle: 'zen' | 'normal' | 'stick' | 'health' | 'cartoon' | 'art' | 'stock_natural' | 'clean_illustration' | 'stock_vector' | 'stock_art' | 'reference_image';
+    referenceCharacter?: 'grandpa' | 'grandma' | 'james' | 'dr_sticky';
     imageModel: 'fal' | 'gemini' | 'runware';  // Renamed from imageProvider for clarity or alias? user said "image generator". Let's stick to imageProvider to match Python script logic if possible, but valid types are key.
     audioVoice: string;
     disclaimerEnabled: boolean;

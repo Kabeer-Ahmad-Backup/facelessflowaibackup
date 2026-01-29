@@ -32,3 +32,10 @@ export const CAPTION_FONTS = [
     { label: "Brush (Artistic)", value: "brush" },
     { label: "Monospace (Code)", value: "monospace" }
 ];
+
+export const CHARACTER_REFERENCE_MAP: Record<string, string> = {
+    'grandpa': '/characters/grandpa.png',
+    'grandma': '/characters/grandma.webp',
+    'james': '/characters/james.webp',
+    'dr_sticky': '/characters/dr_sticky.webp'
+};

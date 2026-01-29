@@ -212,7 +212,7 @@ export async function generateFalImage(prompt: string, projectId: string, sceneI
     );
 }
 
-export async function generateRunwareImage(prompt: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9'): Promise<string> {
+export async function generateRunwareImage(prompt: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9', modelId?: string, referenceImageId?: string): Promise<string> {
     const runware = new Runware({ apiKey: process.env.RUNWARE_API_KEY! });
 
     try {
@@ -229,14 +229,56 @@ export async function generateRunwareImage(prompt: string, projectId: string, sc
             height = 768;
         }
 
-        console.log(`Generating Runware image with dimensions: ${width}x${height} (${aspectRatio})`);
+        console.log(`Generating Runware image with dimensions: ${width}x${height} (${aspectRatio}) using model ${modelId || "runware:100@1"}`);
+        if (referenceImageId) console.log(`Using Reference Image: ${referenceImageId}`);
+
+        let effectiveReferenceImageId = referenceImageId;
+
+        // Handle local file paths (starting with /)
+        if (referenceImageId && referenceImageId.startsWith('/')) {
+            try {
+                const fs = await import('fs/promises');
+                const path = await import('path');
+
+                const filePath = path.join(process.cwd(), 'public', referenceImageId);
+                console.log(`Uploading local reference image: ${filePath}`);
+
+                const fileBuffer = await fs.readFile(filePath);
+                const base64Image = fileBuffer.toString('base64');
+                // Determine mime type roughly
+                const ext = path.extname(filePath).toLowerCase();
+                const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+                const dataUri = `data:${mimeType};base64,${base64Image}`;
+
+                // Use runware.imageUpload (assuming it accepts data URI or similar in 'image' field)
+                const uploadResult = await runware.imageUpload({
+                    image: dataUri
+                });
+
+                if (uploadResult && uploadResult.imageUUID) {
+                    // Converting number/string to string to match seedImage type expectation if needed
+                    console.log(`Uploaded Reference Image UUID: ${uploadResult.imageUUID}`);
+                    effectiveReferenceImageId = String(uploadResult.imageUUID);
+                } else {
+                    console.warn("Runware Upload Failed or returned no UUID", uploadResult);
+                }
+            } catch (uploadError) {
+                console.error("Failed to upload local reference image:", uploadError);
+            }
+        }
 
         const results = await runware.imageInference({
             positivePrompt: prompt,
-            model: "runware:100@1",
+            model: modelId || "runware:100@1",
             width,
             height,
-            numberResults: 1
+            numberResults: 1,
+            // Assuming the SDK and Model support 'seedImage' or 'inputImage'. 
+            // For custom models on Runware, it's often passed via specific parameters or LoRA logic. 
+            // If this is a direct reference image feature:
+            ...(effectiveReferenceImageId ? {
+                seedImage: effectiveReferenceImageId
+            } : {})
         });
 
         if (results && results.length > 0 && results[0].imageURL) {
