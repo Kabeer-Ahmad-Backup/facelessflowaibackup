@@ -1,4 +1,4 @@
-import { AbsoluteFill, Sequence, Series, Audio } from 'remotion';
+import { AbsoluteFill, Sequence, Series, Audio, Video, staticFile } from 'remotion';
 import { z } from 'zod';
 import { Scene } from './Scene';
 import { ProjectSettings, SceneApi } from '../types';
@@ -27,6 +27,14 @@ export const MainComposition: React.FC<Props> = ({ scenes, settings }) => {
     return (
         <AbsoluteFill className="bg-black">
             <Series>
+                {settings.disclaimerEnabled && (
+                    <Series.Sequence durationInFrames={150}> {/* Assumes 5s duration (30fps) - Adjust if needed or use getVideoMetadata */}
+                        <AbsoluteFill className="bg-black flex items-center justify-center">
+                            {/* Use staticFile for safe resolution of public assets in Remotion */}
+                            <Video src={staticFile("Disclaimer.mp4")} />
+                        </AbsoluteFill>
+                    </Series.Sequence>
+                )}
                 {scenes.map((scene, index) => {
                     const durationInSeconds = scene.duration || 5;
                     const durationInFrames = Math.ceil(durationInSeconds * 30);

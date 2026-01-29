@@ -61,7 +61,7 @@ export default function Home() {
         visualStyle: 'zen',
         imageModel: 'fal',
         audioVoice: 'English_ManWithDeepVoice',
-        disclaimerEnabled: false,
+        disclaimerEnabled: true,
         captions: {
             enabled: true,
             position: 'bottom',
@@ -178,9 +178,20 @@ export default function Home() {
                     <div className="lg:col-span-5 flex flex-col justify-end">
                         <div className="bg-stone-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl space-y-6">
 
-                            <div className="flex items-center gap-2 pb-4 border-b border-white/5">
-                                <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                                <span className="text-sm font-semibold text-stone-300 uppercase tracking-widest">Configuration</span>
+                            <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                                    <span className="text-sm font-semibold text-stone-300 uppercase tracking-widest">Configuration</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">Disclaimer</span>
+                                    <button
+                                        onClick={() => setSettings({ ...settings, disclaimerEnabled: !settings.disclaimerEnabled })}
+                                        className={`w-10 h-5 rounded-full relative transition-colors ${settings.disclaimerEnabled ? 'bg-orange-600' : 'bg-stone-700'}`}
+                                    >
+                                        <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${settings.disclaimerEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="space-y-5">

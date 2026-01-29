@@ -852,6 +852,19 @@ export default function ProjectPage() {
 
                         <div className="h-6 w-px bg-white/10"></div>
 
+                        {/* Disclaimer Toggle */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-stone-500 whitespace-nowrap">Disclaimer:</span>
+                            <button
+                                onClick={() => handleUpdateSettings({ disclaimerEnabled: !project.settings.disclaimerEnabled })}
+                                className={`w-8 h-4 rounded-full relative transition-colors ${project.settings.disclaimerEnabled ? 'bg-orange-600' : 'bg-stone-700'}`}
+                            >
+                                <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${project.settings.disclaimerEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
+
+                        <div className="h-6 w-px bg-white/10"></div>
+
                         <span className="text-xs font-bold uppercase tracking-wider text-stone-500 whitespace-nowrap">Caption Settings:</span>
 
                         {/* Caption Toggle - Improved Styling */}
