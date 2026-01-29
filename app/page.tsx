@@ -188,7 +188,14 @@ export default function Home() {
                                     <label className="text-xs font-semibold uppercase tracking-wider text-stone-500">Visual Style</label>
                                     <select
                                         value={settings.visualStyle}
-                                        onChange={(e) => setSettings({ ...settings, visualStyle: e.target.value as any })}
+                                        onChange={(e) => {
+                                            const newStyle = e.target.value as any;
+                                            const updates: any = { visualStyle: newStyle };
+                                            if (newStyle === 'reference_image') {
+                                                updates.imageModel = 'runware';
+                                            }
+                                            setSettings({ ...settings, ...updates });
+                                        }}
                                         className="w-full bg-stone-950 border border-stone-800 rounded-lg p-3 text-sm focus:outline-none focus:border-orange-500/50 transition-colors"
                                     >
                                         <option value="zen">Zen Monk</option>
@@ -201,8 +208,25 @@ export default function Home() {
                                         <option value="stock_vector">Stock + AI (Vector)</option>
                                         <option value="stock_art">Stock + AI (Art)</option>
                                         <option value="clean_illustration">Clean Illustration</option>
+                                        <option value="reference_image">Reference Character</option>
                                     </select>
                                 </div>
+
+                                {settings.visualStyle === 'reference_image' && (
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-stone-500">Character</label>
+                                        <select
+                                            value={settings.referenceCharacter || 'grandpa'}
+                                            onChange={(e) => setSettings({ ...settings, referenceCharacter: e.target.value as any })}
+                                            className="w-full bg-stone-950 border border-stone-800 rounded-lg p-3 text-sm focus:outline-none focus:border-orange-500/50 transition-colors"
+                                        >
+                                            <option value="grandpa">Grandpa</option>
+                                            <option value="grandma">Grandma</option>
+                                            <option value="james">James</option>
+                                            <option value="dr_sticky">Dr. Sticky</option>
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <label className="text-xs font-semibold uppercase tracking-wider text-stone-500">Voice Persona</label>
