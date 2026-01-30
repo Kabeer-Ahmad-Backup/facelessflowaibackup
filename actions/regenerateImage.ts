@@ -3,6 +3,8 @@
 import { createClient } from '@/utils/supabase/server';
 import { generateFalImage, generateRunwareImage, generateGeminiImage } from '@/lib/ai';
 
+import { CHARACTER_REFERENCE_MAP } from '@/lib/constants';
+
 export async function regenerateImage(sceneId: string, text: string, visualStyle: string, imageModel: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9') {
     const supabase = await createClient();
 
@@ -12,10 +14,10 @@ export async function regenerateImage(sceneId: string, text: string, visualStyle
         return { success: false, error: 'Unauthorized' };
     }
 
-    // 2. Verify scene ownership
+    // 2. Verify scene ownership & Fetch Settings
     const { data: scene } = await supabase
         .from('scenes')
-        .select('*, projects!inner(user_id)')
+        .select('*, projects!inner(user_id, settings)')
         .eq('id', sceneId)
         .single();
 
@@ -23,17 +25,23 @@ export async function regenerateImage(sceneId: string, text: string, visualStyle
         return { success: false, error: 'Scene not found or unauthorized' };
     }
 
+    const settings = scene.projects.settings as any; // Cast to access fields
+    // Use passed visualStyle/imageModel if available, or fallback to settings
+    // But for referenceCharacter we MUST look at settings since it's not passed
+    const activeStyle = visualStyle || settings.visualStyle;
+    const activeModel = imageModel || settings.imageModel;
+
     try {
-        console.log(`Regenerating image for scene ${sceneId}`);
+        console.log(`Regenerating image for scene ${sceneId} with style: ${activeStyle}`);
 
         // 3. Build Full Styled Prompt (Same logic as generateScene.ts)
         const simplePrompt = text.trim();
-        const styleMode = visualStyle;
+        const styleMode = activeStyle;
         let styleDesc = "";
         let subjectDesc = "";
         let negativePrompt = "";
 
-        if (styleMode === "normal") {
+        if (styleMode === "normal" || styleMode === "stock_natural") {
             styleDesc = "Style: Cinematic, photorealistic, 8k, everyday life, humanistic, natural lighting.";
             subjectDesc = "Subject: Modern everyday life or general cinematic visuals.";
             negativePrompt = "text, logos, writing, letters, words, watermarks";
@@ -57,6 +65,26 @@ export async function regenerateImage(sceneId: string, text: string, visualStyle
             styleDesc = "Style: clean narrative illustration, modern editorial illustration style, realistic human proportions, adult characters only (ages 25–90), mature facial features, soft painted shading with gentle shadows, clean linework (not cartoon), natural adult anatomy, detailed but uncluttered environment, storytelling illustration look.";
             subjectDesc = "Subject: Adult characters in modern narrative settings.";
             negativePrompt = "child, children, kid, kids, toddler, baby, teen, teenager, cartoon, vector, flat, anime, chibi, 3d, cgi, text";
+        } else if (styleMode === "reference_image") {
+            // User-provided strict prompt template
+            styleDesc = `Role: You are an expert storyboard artist creating high-fidelity assets for a modern animated video series. Do not add Text to images.
+
+1. Character Consistency Protocol:
+Strict Adherence: Use the provided image as an consistent fixed visual charachter. Maintain the exact stick-figure proportions, line weight, and head-to-body ratio.
+Expression: Map the requested emotion onto the minimal facial features without adding realistic details that contradict the style. Use exaggerated posture and gestural body language to convey intent.
+
+2. Environment & Composition:
+Setting: Generate a fully immersive, "world-building" background. Never use white, solid, or gradient voids. The environment must be rich with narrative details (props, furniture, nature) relevant to the scene.
+Framing: Use a cinematic 16:9 composition. Ensure the subject is clearly separated from the background using contrast and soft lighting.
+
+3. Art Direction:
+Style: Modern 2D Vector Illustration.
+No text in image.
+Visuals: Flat colors, clean smooth outlines, zero pixelation, and soft, cel-shaded lighting. Use visual metaphors if the scene calls for it.
+Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
+
+            subjectDesc = ""; // Handled by reference image and prompt context
+            negativePrompt = "text, watermark, extra limbs, distorted face, 3d, realistic, photo, blur, noise, grainy, white background, simple background";
         } else { // zen
             styleDesc = "Style: Cinematic, photorealistic, 8k, serene lighting.";
             subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes and in meditative or teaching poses, minimalist Asian temple backgrounds.";
@@ -67,10 +95,17 @@ export async function regenerateImage(sceneId: string, text: string, visualStyle
 
         // 4. Generate image with the same provider logic
         let imageUrl = "";
-        if (imageModel === 'gemini') {
+        if (activeModel === 'gemini') {
             imageUrl = await generateGeminiImage(fullPrompt, projectId, sceneIndex, aspectRatio);
-        } else if (imageModel === 'runware') {
-            imageUrl = await generateRunwareImage(fullPrompt, projectId, sceneIndex, aspectRatio);
+        } else if (activeModel === 'runware' || activeStyle === 'reference_image') { // Force Runware for reference_image
+            // Enforce 400@1 for reference_image, otherwise 100@1
+            const modelId = activeStyle === 'reference_image' ? "runware:400@1" : "runware:100@1";
+            // Get Reference Image ID if applicable
+            const refImageId = (activeStyle === 'reference_image' && settings.referenceCharacter)
+                ? CHARACTER_REFERENCE_MAP[settings.referenceCharacter]
+                : undefined;
+
+            imageUrl = await generateRunwareImage(fullPrompt, projectId, sceneIndex, aspectRatio, modelId, refImageId);
         } else {
             imageUrl = await generateFalImage(fullPrompt, projectId, sceneIndex, aspectRatio);
         }

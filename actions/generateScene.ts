@@ -71,11 +71,11 @@ export async function generateScene(
         try {
 
             // 4. Generate Simple Scene Description (OpenAI)
-            const baseInstructions = `You are a creative visual director. For each sentence below, keeping context of the previous sentences in mind, create ONE simple image prompt that directly represents the sentence visually. 
+            const baseInstructions = `You are a creative visual director. For each sentence below, keeping context of the previous sentences in mind, create ONE image prompt that directly represents the sentence visually. 
             
 RULES:
 - Use clear, concrete objects, people, and actions
-- Do NOT explain, do NOT add extra ideas beyond the sentence
+- Do NOT add extra ideas beyond the sentence
 - Keep prompts simple and focused
 - Do NOT include style instructions or negative prompts
 - Just describe WHAT to show, not HOW to show it
