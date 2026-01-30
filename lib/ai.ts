@@ -237,33 +237,40 @@ export async function generateRunwareImage(prompt: string, projectId: string, sc
         // Handle local file paths (starting with /)
         if (referenceImageId && referenceImageId.startsWith('/')) {
             try {
-                const fs = await import('fs/promises');
-                const path = await import('path');
+                // Build full URL for HTTP fetch (works in both local and production)
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+                    (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ||
+                    'http://localhost:3000';
 
-                const filePath = path.join(process.cwd(), 'public', referenceImageId);
-                console.log(`Uploading local reference image: ${filePath}`);
+                const imageUrl = `${baseUrl}${referenceImageId}`;
+                console.log(`Fetching reference image via HTTP: ${imageUrl}`);
 
-                const fileBuffer = await fs.readFile(filePath);
-                const base64Image = fileBuffer.toString('base64');
-                // Determine mime type roughly
-                const ext = path.extname(filePath).toLowerCase();
-                const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
-                const dataUri = `data:${mimeType};base64,${base64Image}`;
+                // Fetch image via HTTP
+                const imageResponse = await fetch(imageUrl);
+                if (!imageResponse.ok) {
+                    throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+                }
 
-                // Use runware.imageUpload (assuming it accepts data URI or similar in 'image' field)
+                const imageBuffer = await imageResponse.arrayBuffer();
+                const base64Image = Buffer.from(imageBuffer).toString('base64');
+
+                // Determine mime type from response headers or file extension
+                const contentType = imageResponse.headers.get('content-type') || 'image/png';
+                const dataUri = `data:${contentType};base64,${base64Image}`;
+
+                // Upload to Runware
                 const uploadResult = await runware.imageUpload({
                     image: dataUri
                 });
 
                 if (uploadResult && uploadResult.imageUUID) {
-                    // Converting number/string to string to match seedImage type expectation if needed
                     console.log(`Uploaded Reference Image UUID: ${uploadResult.imageUUID}`);
                     effectiveReferenceImageId = String(uploadResult.imageUUID);
                 } else {
                     console.warn("Runware Upload Failed or returned no UUID", uploadResult);
                 }
             } catch (uploadError) {
-                console.error("Failed to upload local reference image:", uploadError);
+                console.error("Failed to upload reference image via HTTP:", uploadError);
             }
         }
 

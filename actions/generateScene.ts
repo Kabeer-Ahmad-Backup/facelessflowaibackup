@@ -71,14 +71,17 @@ export async function generateScene(
         try {
 
             // 4. Generate Simple Scene Description (OpenAI)
-            const baseInstructions = `You are a creative visual director. For each sentence below, keeping context of the previous sentences in mind, create ONE image prompt that directly represents the sentence visually. 
+            const baseInstructions = `You are a visual storyteller creating storyboard frames. For each sentence below, keeping context of the previous sentences in mind, create ONE image prompt that visually represents the exact moment described. 
             
 RULES:
+- Focus on the PRIMARY action happening in the sentence
+- Clearly show who is doing what, where, and why
+- Describe physical actions, posture, environment, and interactions
 - Use clear, concrete objects, people, and actions
-- Do NOT add extra ideas beyond the sentence
+- Do NOT add ideas, symbolism, or events not stated in the sentence
 - Keep prompts simple and focused
-- Do NOT include style instructions or negative prompts
-- Just describe WHAT to show, not HOW to show it
+- Do NOT include style instructions, camera terms, or negative prompts
+- Describe WHAT is visible in the frame, not HOW it is drawn
 
 Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
 
@@ -141,24 +144,30 @@ Output format: Return ONLY a valid JSON array of strings, containing exactly one
                 negativePrompt = "child, children, kid, kids, toddler, baby, teen, teenager, cartoon, vector, flat, anime, chibi, 3d, cgi, text";
             } else if (styleMode === "reference_image") {
                 // User-provided strict prompt template
-                styleDesc = `Role: You are an expert storyboard artist creating high-fidelity assets for a modern animated video series. Do not add Text to images.
+                styleDesc = `Role: You are an expert storyboard artist generating high-fidelity visual frames for a modern animated video series. Do NOT add any text to images.
 
-1. Character Consistency Protocol:
-Strict Adherence: Use the provided image as an consistent fixed visual charachter. Maintain the exact stick-figure proportions, line weight, and head-to-body ratio.
-Expression: Map the requested emotion onto the minimal facial features without adding realistic details that contradict the style. Use exaggerated posture and gestural body language to convey intent.
+1. Character Identity Consistency:
+Reference Usage: Use the provided image strictly as a visual identity reference ONLY.
+Identity Lock: Preserve the same character identity — face shape, facial features, body style, proportions, line weight, and overall illustration language.
+Pose Freedom: The character’s posture, gesture, body orientation, and camera angle MUST change naturally to match the described scene and action.
+Emotion Mapping: Convey emotion through body language and minimal facial changes without adding realistic or detailed facial features.
 
-2. Environment & Composition:
-Setting: Generate a fully immersive, "world-building" background. Never use white, solid, or gradient voids. The environment must be rich with narrative details (props, furniture, nature) relevant to the scene.
-Framing: Use a cinematic 16:9 composition. Ensure the subject is clearly separated from the background using contrast and soft lighting.
+2. Scene Accuracy & World Building:
+Scene Priority: The visual scene must directly and literally represent the described action or moment.
+Environment: Always generate a fully realized environment relevant to the scene (interiors, streets, nature, objects, props). Never use blank, white, or abstract backgrounds.
+Interaction: The character should physically interact with the environment when applicable (sitting, walking, holding, reaching, observing).
 
-3. Art Direction:
-Style: Modern 2D Vector Illustration.
-No text in image.
-Visuals: Flat colors, clean smooth outlines, zero pixelation, and soft, cel-shaded lighting. Use visual metaphors if the scene calls for it.
-Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
+3. Composition & Framing:
+Aspect Ratio: Cinematic 16:9 framing.
+Camera Logic: Choose framing (wide, medium, close-up) that best communicates the scene’s emotion and action.
+Depth & Separation: Use lighting, contrast, and foreground/background elements to clearly separate the character from the environment.
+Style: Modern 2D vector illustration.
+Visual Language: Flat colors, clean smooth outlines, soft cel-shaded lighting, no textures or noise.
+Quality Target: Sharp, high-contrast visuals suitable for 4K animated video pipelines.
+No text in image.`;
 
                 subjectDesc = ""; // Handled by reference image and prompt context
-                negativePrompt = "text, watermark, extra limbs, distorted face, 3d, realistic, photo, blur, noise, grainy, white background, simple background";
+                negativePrompt = "text, watermark, extra limbs, distorted face, noise, grainy";
             } else { // zen
                 styleDesc = "Style: Cinematic, photorealistic, 8k, serene lighting.";
                 subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes and in meditative or teaching poses, minimalist Asian temple backgrounds.";

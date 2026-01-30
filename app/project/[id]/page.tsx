@@ -842,80 +842,100 @@ export default function ProjectPage() {
                             <span className="text-xs text-stone-300">Show</span>
                         </label>
 
-                        {/* Font */}
+                        {/* Caption Style - moved to first position */}
                         <select
-                            value={project.settings.captions.font}
+                            value={project.settings.captions.style || 'classic'}
                             onChange={(e) => handleUpdateSettings({
-                                captions: { ...project.settings.captions, font: e.target.value as any }
+                                captions: { ...project.settings.captions, style: e.target.value as any }
                             })}
                             className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
                             disabled={!project.settings.captions.enabled}
                         >
-                            <option value="sans">Sans</option>
-                            <option value="serif">Serif</option>
-                            <option value="brush">Brush</option>
+                            <option value="classic">Classic</option>
+                            <option value="word_pop">Word Pop</option>
+                            <option value="karaoke">Karaoke</option>
+                            <option value="mrbeast">Mr Beast</option>
                         </select>
 
-                        {/* Size */}
-                        <select
-                            value={project.settings.captions.fontSize || 'medium'}
-                            onChange={(e) => handleUpdateSettings({
-                                captions: { ...project.settings.captions, fontSize: e.target.value as any }
-                            })}
-                            className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
-                            disabled={!project.settings.captions.enabled}
-                        >
-                            <option value="small">S</option>
-                            <option value="medium">M</option>
-                            <option value="large">L</option>
-                            <option value="xlarge">XL</option>
-                        </select>
+                        {/* Classic-only settings - only show when classic style is selected */}
+                        {(project.settings.captions.style === 'classic' || !project.settings.captions.style) && (
+                            <>
+                                {/* Font */}
+                                <select
+                                    value={project.settings.captions.font}
+                                    onChange={(e) => handleUpdateSettings({
+                                        captions: { ...project.settings.captions, font: e.target.value as any }
+                                    })}
+                                    className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
+                                    disabled={!project.settings.captions.enabled}
+                                >
+                                    <option value="sans">Sans</option>
+                                    <option value="serif">Serif</option>
+                                    <option value="brush">Brush</option>
+                                </select>
 
-                        {/* Position */}
-                        <select
-                            value={project.settings.captions.position}
-                            onChange={(e) => handleUpdateSettings({
-                                captions: { ...project.settings.captions, position: e.target.value as any }
-                            })}
-                            className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
-                            disabled={!project.settings.captions.enabled}
-                        >
-                            <option value="top">Top</option>
-                            <option value="center">Center</option>
-                            <option value="mid-bottom">Mid-Bottom</option>
-                            <option value="bottom">Bottom</option>
-                        </select>
+                                {/* Size */}
+                                <select
+                                    value={project.settings.captions.fontSize || 'medium'}
+                                    onChange={(e) => handleUpdateSettings({
+                                        captions: { ...project.settings.captions, fontSize: e.target.value as any }
+                                    })}
+                                    className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
+                                    disabled={!project.settings.captions.enabled}
+                                >
+                                    <option value="small">S</option>
+                                    <option value="medium">M</option>
+                                    <option value="large">L</option>
+                                    <option value="xlarge">XL</option>
+                                </select>
 
-                        {/* Animation */}
-                        <select
-                            value={project.settings.captions.animation || 'typewriter'}
-                            onChange={(e) => handleUpdateSettings({
-                                captions: { ...project.settings.captions, animation: e.target.value as any }
-                            })}
-                            className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
-                            disabled={!project.settings.captions.enabled}
-                        >
-                            <option value="none">None</option>
-                            <option value="typewriter">Typewriter</option>
-                            <option value="fade-in">Fade In</option>
-                            <option value="slide-up">Slide Up</option>
-                            <option value="bounce">Bounce</option>
-                        </select>
+                                {/* Position */}
+                                <select
+                                    value={project.settings.captions.position}
+                                    onChange={(e) => handleUpdateSettings({
+                                        captions: { ...project.settings.captions, position: e.target.value as any }
+                                    })}
+                                    className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
+                                    disabled={!project.settings.captions.enabled}
+                                >
+                                    <option value="top">Top</option>
+                                    <option value="center">Center</option>
+                                    <option value="mid-bottom">Mid-Bottom</option>
+                                    <option value="bottom">Bottom</option>
+                                </select>
 
-                        {/* Stroke/Weight */}
-                        <select
-                            value={project.settings.captions.strokeWidth || 'medium'}
-                            onChange={(e) => handleUpdateSettings({
-                                captions: { ...project.settings.captions, strokeWidth: e.target.value as any }
-                            })}
-                            className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
-                            disabled={!project.settings.captions.enabled}
-                        >
-                            <option value="thin">Thin</option>
-                            <option value="medium">Medium</option>
-                            <option value="thick">Thick</option>
-                            <option value="bold">Bold</option>
-                        </select>
+                                {/* Animation */}
+                                <select
+                                    value={project.settings.captions.animation || 'typewriter'}
+                                    onChange={(e) => handleUpdateSettings({
+                                        captions: { ...project.settings.captions, animation: e.target.value as any }
+                                    })}
+                                    className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
+                                    disabled={!project.settings.captions.enabled}
+                                >
+                                    <option value="none">None</option>
+                                    <option value="typewriter">Typewriter</option>
+                                    <option value="fade-in">Fade In</option>
+                                    <option value="slide-up">Slide Up</option>
+                                    <option value="bounce">Bounce</option>
+                                </select>
+
+                                {/* Stroke/Weight */}
+                                <select
+                                    value={project.settings.captions.strokeWidth || 'medium'}
+                                    onChange={(e) => handleUpdateSettings({
+                                        captions: { ...project.settings.captions, strokeWidth: e.target.value as any }
+                                    })}
+                                    className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded px-2 py-1"
+                                    disabled={!project.settings.captions.enabled}
+                                >
+                                    <option value="thin">Thin</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="thick">Thick</option>
+                                    <option value="bold">Bold</option>
+                                </select>
+                            </>
+                        )}
 
 
                         {/* Divider */}

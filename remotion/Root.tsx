@@ -30,7 +30,8 @@ export const RemotionRoot: React.FC = () => {
                             font: 'helvetica',
                             fontSize: 'medium',
                             animation: 'typewriter',
-                            strokeWidth: 'medium'
+                            strokeWidth: 'medium',
+                            style: 'classic'
                         },
                         transitions: { mode: 'random', type: 'fadein' },
                         audioWave: {

@@ -22,6 +22,7 @@ export type ProjectSettings = {
         fontSize: 'small' | 'medium' | 'large' | 'xlarge';
         animation: 'none' | 'typewriter' | 'fade-in' | 'slide-up' | 'bounce';
         strokeWidth: 'thin' | 'medium' | 'thick' | 'bold';
+        style: 'word_pop' | 'karaoke' | 'mrbeast' | 'classic';
     };
     audioWave: {
         enabled: boolean;

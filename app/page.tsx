@@ -68,7 +68,8 @@ export default function Home() {
             font: 'helvetica',
             fontSize: 'medium',
             animation: 'typewriter',
-            strokeWidth: 'medium'
+            strokeWidth: 'medium',
+            style: 'classic'
         },
         audioWave: {
             enabled: false,
