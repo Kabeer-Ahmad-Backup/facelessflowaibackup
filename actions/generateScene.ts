@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { SceneApi, ProjectSettings } from '@/types';
 import { generateMinimaxAudio, generateFalImage, generateRunwareImage, generateGeminiImage } from '@/lib/ai';
+import { generateGenAIProAudio } from '@/lib/genaipro';
 import { VOICE_ID_MAP, CHARACTER_REFERENCE_MAP } from '@/lib/constants';
 
 // Admin client for bypass if needed
@@ -186,9 +187,20 @@ No text in image.`;
             let audioUrl = "";
             let audioDuration = 5;
             try {
-                const audioResult = await generateMinimaxAudio(text, targetVoiceId, projectId, sceneIndex);
-                audioUrl = audioResult.url;
-                audioDuration = audioResult.duration;
+                // Check if voice is from GenAIPro (prefix: genaipro_)
+                if (targetVoiceId.startsWith('genaipro_')) {
+                    const actualVoiceId = targetVoiceId.replace('genaipro_', '');
+                    console.log(`Using GenAIPro provider with voice: ${actualVoiceId}`);
+                    const audioResult = await generateGenAIProAudio(text, actualVoiceId, projectId, sceneIndex);
+                    audioUrl = audioResult.url;
+                    audioDuration = audioResult.duration;
+                } else {
+                    // Use Minimax for default voices
+                    console.log(`Using Minimax provider with voice: ${targetVoiceId}`);
+                    const audioResult = await generateMinimaxAudio(text, targetVoiceId, projectId, sceneIndex);
+                    audioUrl = audioResult.url;
+                    audioDuration = audioResult.duration;
+                }
             } catch (e: any) {
                 console.error("Audio Generation Failed:", e);
                 throw new Error(`Audio Gen Failed: ${e.message}`);

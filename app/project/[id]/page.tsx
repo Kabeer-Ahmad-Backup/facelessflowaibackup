@@ -33,6 +33,7 @@ export default function ProjectPage() {
     const [rendering, setRendering] = useState(false);
     const [renderProgress, setRenderProgress] = useState<any>(null);
     const [showRenderModal, setShowRenderModal] = useState(false);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
     const playerRef = useRef<any>(null);
 
     // Load Project Data
@@ -671,7 +672,15 @@ export default function ProjectPage() {
                             <div key={scene.id} className={`bg-stone-900 border p-3 rounded-lg transition-all cursor-pointer ${expandedSceneId === scene.id ? 'border-orange-500/50' : 'border-white/5 hover:border-orange-500/30'}`}>
                                 <div className="flex gap-3 items-start" onClick={() => setExpandedSceneId(expandedSceneId === scene.id ? null : scene.id)}>
                                     {/* Thumbnail */}
-                                    <div className="w-16 h-16 bg-black rounded-md overflow-hidden flex-shrink-0 relative border border-white/5">
+                                    <div
+                                        className="w-16 h-16 bg-black rounded-md overflow-hidden flex-shrink-0 relative border border-white/5 hover:ring-2 hover:ring-orange-500/50 transition-all"
+                                        onClick={(e) => {
+                                            if (scene.image_url && scene.media_type !== 'video' && !scene.image_url.includes('.mp4')) {
+                                                e.stopPropagation();
+                                                setPreviewImage(scene.image_url);
+                                            }
+                                        }}
+                                    >
                                         {scene.image_url ? (
                                             (scene.media_type === 'video' || scene.image_url.includes('.mp4')) ? (
                                                 <video
@@ -1125,6 +1134,31 @@ export default function ProjectPage() {
                 videoUrl={project.video_url}
                 error={renderProgress?.error}
             />
+
+            {/* Image Preview Modal */}
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+                        <img
+                            src={previewImage}
+                            alt="Scene preview"
+                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                            onClick={() => setPreviewImage(null)}
+                            className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

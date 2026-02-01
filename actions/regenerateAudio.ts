@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { generateMinimaxAudio } from '@/lib/ai';
+import { generateGenAIProAudio } from '@/lib/genaipro';
 
 export async function regenerateAudio(sceneId: string, text: string, voiceId: string, projectId: string, sceneIndex: number) {
     const supabase = await createClient();
@@ -24,9 +25,21 @@ export async function regenerateAudio(sceneId: string, text: string, voiceId: st
     }
 
     try {
-        // 3. Generate new audio
+        // 3. Generate new audio (route to appropriate provider)
         console.log(`Regenerating audio for scene ${sceneId}`);
-        const { url: audioUrl, duration: audioDuration } = await generateMinimaxAudio(text, voiceId, projectId, sceneIndex);
+        let audioUrl: string;
+        let audioDuration: number;
+
+        if (voiceId.startsWith('genaipro_')) {
+            const actualVoiceId = voiceId.replace('genaipro_', '');
+            const result = await generateGenAIProAudio(text, actualVoiceId, projectId, sceneIndex);
+            audioUrl = result.url;
+            audioDuration = result.duration;
+        } else {
+            const result = await generateMinimaxAudio(text, voiceId, projectId, sceneIndex);
+            audioUrl = result.url;
+            audioDuration = result.duration;
+        }
 
         // 4. Update scene with new audio
         const { error: updateError } = await supabase
