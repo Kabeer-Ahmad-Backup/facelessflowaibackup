@@ -6,6 +6,7 @@ import OpenAI from 'openai';
 import { SceneApi, ProjectSettings } from '@/types';
 import { generateMinimaxAudio, generateFalImage, generateRunwareImage, generateGeminiImage } from '@/lib/ai';
 import { generateGenAIProAudio } from '@/lib/genaipro';
+import { generateImagenImage } from '@/lib/imagen';
 import { VOICE_ID_MAP, CHARACTER_REFERENCE_MAP } from '@/lib/constants';
 
 // Admin client for bypass if needed
@@ -120,7 +121,7 @@ Output format: Return ONLY a valid JSON array of strings, containing exactly one
             let negativePrompt = "";
 
             if (styleMode === "normal" || styleMode === "stock_natural") {
-                styleDesc = "Style: Cinematic, photorealistic, 8k, everyday life, humanistic, natural lighting.";
+                styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, natural lighting.";
                 subjectDesc = "Subject: Modern everyday life or general cinematic visuals.";
                 negativePrompt = "text, logos, writing, letters, words, watermarks";
             } else if (styleMode === "stick") {
@@ -170,9 +171,9 @@ No text in image.`;
                 subjectDesc = ""; // Handled by reference image and prompt context
                 negativePrompt = "text, watermark, extra limbs, distorted face, noise, grainy";
             } else { // zen
-                styleDesc = "Style: Cinematic, photorealistic, 8k, serene lighting.";
-                subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes and in meditative or teaching poses, minimalist Asian temple backgrounds.";
-                negativePrompt = "text, logos, writing, modern, cluttered";
+                styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, serene lighting.";
+                subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes.";
+                negativePrompt = "text, logos, writing, cluttered";
             }
 
             const fullPrompt = `${simplePrompt} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
@@ -242,7 +243,14 @@ No text in image.`;
             if (mediaType === 'image') {
                 console.log(`Generating Image with Model: ${settings.imageModel || 'fal'}`);
                 try {
-                    if (settings.imageModel === 'gemini') {
+                    if (settings.imageModel === 'imagen') {
+                        try {
+                            imageUrl = await generateImagenImage(fullPrompt, projectId, sceneIndex, settings.aspectRatio);
+                        } catch (imagenError: any) {
+                            console.warn('Imagen failed, falling back to Gemini:', imagenError.message);
+                            imageUrl = await generateGeminiImage(fullPrompt, projectId, sceneIndex, settings.aspectRatio);
+                        }
+                    } else if (settings.imageModel === 'gemini') {
                         imageUrl = await generateGeminiImage(fullPrompt, projectId, sceneIndex, settings.aspectRatio);
                     } else if (settings.imageModel === 'runware' || settings.visualStyle === 'reference_image') {
                         // Enforce 400@1 for reference_image, otherwise 100@1

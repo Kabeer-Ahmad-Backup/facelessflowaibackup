@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { generateFalImage, generateRunwareImage, generateGeminiImage } from '@/lib/ai';
+import { generateImagenImage } from '@/lib/imagen';
 
 import { CHARACTER_REFERENCE_MAP } from '@/lib/constants';
 
@@ -95,7 +96,14 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
 
         // 4. Generate image with the same provider logic
         let imageUrl = "";
-        if (activeModel === 'gemini') {
+        if (activeModel === 'imagen') {
+            try {
+                imageUrl = await generateImagenImage(fullPrompt, projectId, sceneIndex, aspectRatio);
+            } catch (imagenError: any) {
+                console.warn('Imagen failed, falling back to Gemini:', imagenError.message);
+                imageUrl = await generateGeminiImage(fullPrompt, projectId, sceneIndex, aspectRatio);
+            }
+        } else if (activeModel === 'gemini') {
             imageUrl = await generateGeminiImage(fullPrompt, projectId, sceneIndex, aspectRatio);
         } else if (activeModel === 'runware' || activeStyle === 'reference_image') { // Force Runware for reference_image
             // Enforce 400@1 for reference_image, otherwise 100@1

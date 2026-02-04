@@ -264,6 +264,7 @@ export default function Home() {
                                             <option value="fal">Fal.ai (Flux Pro)</option>
                                             <option value="runware">Runware (Fast)</option>
                                             <option value="gemini">Google Gemini 2.5</option>
+                                            <option value="imagen">Google Imagen 4.0 Fast</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
