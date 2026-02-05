@@ -24,6 +24,7 @@ export const RemotionRoot: React.FC = () => {
                         imageModel: 'fal',
                         audioVoice: 'English_ManWithDeepVoice',
                         disclaimerEnabled: false,
+                        longSentenceBreak: true,
                         captions: {
                             enabled: true,
                             position: 'bottom',
@@ -31,7 +32,8 @@ export const RemotionRoot: React.FC = () => {
                             fontSize: 'medium',
                             animation: 'typewriter',
                             strokeWidth: 'medium',
-                            style: 'classic'
+                            style: 'classic',
+                            color: '#00D9FF'
                         },
                         transitions: { mode: 'random', type: 'fadein' },
                         audioWave: {
