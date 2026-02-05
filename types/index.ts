@@ -15,7 +15,7 @@ export type ProjectSettings = {
     imageModel: 'fal' | 'gemini' | 'runware' | 'imagen';  // Renamed from imageProvider for clarity or alias? user said "image generator". Let's stick to imageProvider to match Python script logic if possible, but valid types are key.
     audioVoice: string;
     disclaimerEnabled: boolean;
-    longSentenceBreak: boolean; // Generate 2 images for scenes with 25+ words
+    longSentenceBreak: boolean; // Generate 2 images for scenes with 20+ words
     captions: {
         enabled: boolean;
         position: 'bottom' | 'mid-bottom' | 'center' | 'top';

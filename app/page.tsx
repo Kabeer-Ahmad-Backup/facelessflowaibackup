@@ -217,7 +217,7 @@ export default function Home() {
                                                 <span className="text-sm font-semibold text-stone-200">Long Sentence Break</span>
                                                 <span className="text-xs px-2 py-0.5 bg-green-500/10 text-green-400 rounded-full font-medium">Recommended</span>
                                             </div>
-                                            <p className="text-xs text-stone-500">Generate 2 images for scenes with 25+ words</p>
+                                            <p className="text-xs text-stone-500">Generate 2 images for scenes with 20+ words</p>
                                         </div>
                                         <button
                                             onClick={() => setSettings({ ...settings, longSentenceBreak: !settings.longSentenceBreak })}

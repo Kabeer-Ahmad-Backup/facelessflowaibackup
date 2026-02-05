@@ -277,7 +277,7 @@ No text in image.`;
             // 8.5. Check if we need a second image (Long Sentence Break)
             let imageUrl2: string | null = null;
             const wordCount = text.trim().split(/\s+/).length;
-            if (settings.longSentenceBreak && wordCount > 25 && mediaType === 'image') {
+            if (settings.longSentenceBreak && wordCount > 20 && mediaType === 'image') {
                 console.log(`Scene has ${wordCount} words - generating second image for variety`);
                 try {
                     // Generate a different prompt for the second image
