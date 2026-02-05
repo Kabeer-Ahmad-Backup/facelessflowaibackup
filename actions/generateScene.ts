@@ -274,12 +274,68 @@ No text in image.`;
                 imageUrl = stockVideoUrl!;
             }
 
+            // 8.5. Check if we need a second image (Long Sentence Break)
+            let imageUrl2: string | null = null;
+            const wordCount = text.trim().split(/\s+/).length;
+            if (settings.longSentenceBreak && wordCount > 25 && mediaType === 'image') {
+                console.log(`Scene has ${wordCount} words - generating second image for variety`);
+                try {
+                    // Generate a different prompt for the second image
+                    const prompt2Response = await openai.chat.completions.create({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are a prompt generator for visual scenes. Generate a visual scene description that is DIFFERENT from the first one but still related to the same topic. Return ONLY a single sentence visual description, no JSON.'
+                            },
+                            {
+                                role: 'user',
+                                content: `Create a second, different visual description for: ${text}. Make it complementary but different from: ${simplePrompt}`
+                            }
+                        ],
+                        temperature: 0.9, // Higher temp for more variety
+                    });
+
+                    const simplePrompt2 = prompt2Response.choices[0].message.content?.trim() || simplePrompt;
+                    const fullPrompt2 = `${simplePrompt2} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
+
+                    console.log('Generating second image with different prompt:', simplePrompt2);
+
+                    // Generate second image using same model
+                    if (settings.imageModel === 'imagen') {
+                        try {
+                            imageUrl2 = await generateImagenImage(fullPrompt2, projectId, sceneIndex + 0.5, settings.aspectRatio);
+                        } catch (imagenError: any) {
+                            console.warn('Imagen failed for second image, falling back to Gemini:', imagenError.message);
+                            imageUrl2 = await generateGeminiImage(fullPrompt2, projectId, sceneIndex + 0.5, settings.aspectRatio);
+                        }
+                    } else if (settings.imageModel === 'gemini') {
+                        imageUrl2 = await generateGeminiImage(fullPrompt2, projectId, sceneIndex + 0.5, settings.aspectRatio);
+                    } else if (settings.imageModel === 'runware' || settings.visualStyle === 'reference_image') {
+                        const modelId = settings.visualStyle === 'reference_image' ? "runware:400@1" : "runware:100@1";
+                        const refImageId = (settings.visualStyle === 'reference_image' && settings.referenceCharacter)
+                            ? CHARACTER_REFERENCE_MAP[settings.referenceCharacter]
+                            : undefined;
+
+                        imageUrl2 = await generateRunwareImage(fullPrompt2, projectId, sceneIndex + 0.5, settings.aspectRatio, modelId, refImageId);
+                    } else {
+                        imageUrl2 = await generateFalImage(fullPrompt2, projectId, sceneIndex + 0.5, settings.aspectRatio);
+                    }
+
+                    console.log('Second image generated successfully:', imageUrl2);
+                } catch (e: any) {
+                    console.error('Failed to generate second image:', e);
+                    // Continue with single image if second generation fails
+                }
+            }
+
             // 9. Update Scene to Ready
             const { error: updateError } = await supabase
                 .from('scenes')
                 .update({
                     prompt: fullPrompt,
                     image_url: imageUrl,
+                    image_url_2: imageUrl2, // Second image for long sentences
                     audio_url: audioUrl,
                     duration: audioDuration,
                     status: 'ready',

@@ -3,8 +3,13 @@
 import { createClient } from '@/utils/supabase/server';
 import { generateFalImage, generateRunwareImage, generateGeminiImage } from '@/lib/ai';
 import { generateImagenImage } from '@/lib/imagen';
+import OpenAI from 'openai';
 
 import { CHARACTER_REFERENCE_MAP } from '@/lib/constants';
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY!,
+});
 
 export async function regenerateImage(sceneId: string, text: string, visualStyle: string, imageModel: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9') {
     const supabase = await createClient();
@@ -35,8 +40,27 @@ export async function regenerateImage(sceneId: string, text: string, visualStyle
     try {
         console.log(`Regenerating image for scene ${sceneId} with style: ${activeStyle}`);
 
-        // 3. Build Full Styled Prompt (Same logic as generateScene.ts)
-        const simplePrompt = text.trim();
+        // 3. Generate fresh prompt using OpenAI
+        console.log('Generating fresh prompt with OpenAI...');
+        const promptResponse = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a visual prompt writer. Generate a detailed, visual, descriptive scene prompt based on the given text. Return ONLY a single sentence visual description, no JSON, no explanations.'
+                },
+                {
+                    role: 'user',
+                    content: `Create a detailed visual scene description for: ${text}`
+                }
+            ],
+            temperature: 0.8,
+        });
+
+        let simplePrompt = promptResponse.choices[0].message.content?.trim() || text;
+        console.log('Generated prompt:', simplePrompt);
+
+        // 4. Build Full Styled Prompt (Same logic as generateScene.ts)
         const styleMode = activeStyle;
         let styleDesc = "";
         let subjectDesc = "";

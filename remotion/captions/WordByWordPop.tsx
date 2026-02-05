@@ -15,34 +15,28 @@ export const WordByWordPop: React.FC<WordByWordPopProps> = ({ text, durationInSe
     const timings = estimateWordTimings(text, durationInSeconds);
     const currentIndex = getCurrentWordIndex(timings, currentTime);
 
-    // Group words into pairs
-    const pairIndex = Math.floor(currentIndex / 2);
+    // Calculate current pair index (every 2 words is a pair)
+    const currentPairIndex = Math.floor(currentIndex / 2);
 
-    // Show only a window of pairs to avoid clutter
-    const PAIRS_BEFORE = 1;
-    const PAIRS_AFTER = 1;
-    const startPairIndex = Math.max(0, pairIndex - PAIRS_BEFORE);
-    const endPairIndex = Math.min(Math.ceil(timings.length / 2), pairIndex + PAIRS_AFTER + 1);
+    // Create pairs of words
+    const pairs: { words: string[], indices: number[], startTime: number, pairIndex: number }[] = [];
+    for (let i = 0; i < timings.length; i += 2) {
+        const word1 = timings[i];
+        const word2 = timings[i + 1];
 
-    // Create pairs array
-    const pairs: { words: string[], startTime: number, endTime: number, pairIndex: number }[] = [];
-    for (let i = startPairIndex; i < endPairIndex; i++) {
-        const wordIndex1 = i * 2;
-        const wordIndex2 = i * 2 + 1;
-        const wordsInPair = [];
-
-        if (wordIndex1 < timings.length) wordsInPair.push(timings[wordIndex1].word);
-        if (wordIndex2 < timings.length) wordsInPair.push(timings[wordIndex2].word);
-
-        if (wordsInPair.length > 0) {
-            pairs.push({
-                words: wordsInPair,
-                startTime: timings[wordIndex1].startTime,
-                endTime: timings[Math.min(wordIndex2, timings.length - 1)].endTime,
-                pairIndex: i
-            });
-        }
+        pairs.push({
+            words: word2 ? [word1.word, word2.word] : [word1.word],
+            indices: word2 ? [i, i + 1] : [i],
+            startTime: word1.startTime,
+            pairIndex: Math.floor(i / 2)
+        });
     }
+
+    // Show only 3 pairs (5-6 words total)
+    const WINDOW_SIZE = 3;
+    const startPairIndex = Math.max(0, currentPairIndex - 1);
+    const endPairIndex = Math.min(pairs.length, startPairIndex + WINDOW_SIZE);
+    const visiblePairs = pairs.slice(startPairIndex, endPairIndex);
 
     return (
         <AbsoluteFill style={{
@@ -53,41 +47,42 @@ export const WordByWordPop: React.FC<WordByWordPopProps> = ({ text, durationInSe
         }}>
             <div style={{
                 display: 'flex',
-                flexWrap: 'wrap',
                 justifyContent: 'center',
                 alignItems: 'center',
-                gap: 16,
                 maxWidth: '90%',
-                padding: '0 20px'
+                padding: '0 20px',
+                gap: 16
             }}>
-                {pairs.map((pair) => {
-                    const isActive = pair.pairIndex === pairIndex;
-                    const isPast = pair.pairIndex < pairIndex;
-                    const isFuture = pair.pairIndex > pairIndex;
+                {visiblePairs.map((pair) => {
+                    const isActive = pair.pairIndex === currentPairIndex;
+                    const isPast = pair.pairIndex < currentPairIndex;
+                    const isFuture = pair.pairIndex > currentPairIndex;
 
-                    // Smooth spring animation for active pair
+                    // Animation timing
                     const framesSinceActive = frame - (pair.startTime * fps);
+
+                    // Spring animation for active pair
                     const scale = isActive ? spring({
                         frame: framesSinceActive,
                         fps,
-                        config: { damping: 250, stiffness: 300, mass: 0.6 }
+                        config: { damping: 200, stiffness: 300, mass: 0.5 }
                     }) : 1;
 
-                    // Gentle pop effect
+                    // Pop scale effect
                     const activeScale = isActive
-                        ? interpolate(scale, [0, 1], [0.85, 1.15], { easing: Easing.out(Easing.ease) })
-                        : isPast ? 1 : 0.95;
+                        ? interpolate(scale, [0, 1], [0.9, 1.2], { easing: Easing.out(Easing.ease) })
+                        : 1;
 
-                    // Opacity animations
-                    const opacity = isFuture ? 0.4 : 1;
-
-                    // Gentler Y-position bounce
+                    // Bounce effect
                     const yOffset = isActive
-                        ? interpolate(framesSinceActive, [0, 10, 20], [0, -8, 0], {
+                        ? interpolate(framesSinceActive, [0, 8, 16], [0, -10, 0], {
                             extrapolateRight: 'clamp',
                             easing: Easing.bezier(0.25, 0.1, 0.25, 1)
                         })
                         : 0;
+
+                    // Opacity
+                    const opacity = isFuture ? 0.3 : 1;
 
                     return (
                         <div
@@ -96,53 +91,56 @@ export const WordByWordPop: React.FC<WordByWordPopProps> = ({ text, durationInSe
                                 display: 'inline-block',
                                 position: 'relative',
                                 transform: `scale(${activeScale}) translateY(${yOffset}px)`,
-                                transition: !isActive ? 'transform 0.3s ease-out, opacity 0.3s' : 'none',
-                                opacity
+                                transition: !isActive ? 'transform 0.25s ease-out' : 'none',
+                                opacity,
+                                // Add extra margin for non-active pairs to create space
+                                margin: isActive ? '0 20px' : '0'
                             }}
                         >
-                            {/* Single animated gradient background for entire pair */}
+                            {/* Single gradient background for the entire pair */}
                             {isActive && (
                                 <div style={{
                                     position: 'absolute',
                                     top: -8,
-                                    left: -10,
-                                    right: -10,
+                                    left: -12,
+                                    right: -12,
                                     bottom: -8,
                                     background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-                                    borderRadius: 10,
+                                    borderRadius: 12,
                                     zIndex: -1,
-                                    boxShadow: '0 6px 20px rgba(255, 215, 0, 0.5), 0 0 25px rgba(255, 165, 0, 0.3)',
-                                    opacity: interpolate(framesSinceActive, [0, 8], [0, 1], { extrapolateRight: 'clamp' })
+                                    boxShadow: '0 8px 24px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 165, 0, 0.4)',
+                                    opacity: interpolate(framesSinceActive, [0, 6], [0, 1], { extrapolateRight: 'clamp' })
                                 }} />
                             )}
 
-                            {/* Softer glow effect for active pair */}
+                            {/* Outer glow */}
                             {isActive && (
                                 <div style={{
                                     position: 'absolute',
-                                    top: -12,
-                                    left: -12,
-                                    right: -12,
-                                    bottom: -12,
-                                    background: 'radial-gradient(circle, rgba(255,215,0,0.25) 0%, transparent 70%)',
-                                    borderRadius: 14,
+                                    top: -16,
+                                    left: -16,
+                                    right: -16,
+                                    bottom: -16,
+                                    background: 'radial-gradient(circle, rgba(255,215,0,0.3) 0%, transparent 70%)',
+                                    borderRadius: 16,
                                     zIndex: -2,
-                                    opacity: interpolate(framesSinceActive, [0, 10, 25], [0, 0.7, 0.2], { extrapolateRight: 'clamp' })
+                                    opacity: interpolate(framesSinceActive, [0, 8, 20], [0, 0.8, 0.3], { extrapolateRight: 'clamp' })
                                 }} />
                             )}
 
                             {/* Both words together */}
                             <span style={{
                                 fontFamily: 'Inter, Arial, sans-serif',
-                                fontSize: isActive ? 60 : 52,
+                                fontSize: isActive ? 64 : 50,
                                 fontWeight: isActive ? 900 : 700,
-                                color: isActive ? '#1A1A1A' : (isPast ? '#FFFFFF' : '#B0B0B0'),
+                                color: isActive ? '#1A1A1A' : (isPast ? '#FFFFFF' : '#C0C0C0'),
                                 textShadow: isActive
                                     ? 'none'
                                     : '3px 3px 6px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.7)',
-                                letterSpacing: isActive ? '1px' : '0.5px',
+                                letterSpacing: isActive ? '1.5px' : '0.5px',
                                 textTransform: 'uppercase',
-                                transition: !isActive ? 'all 0.3s ease' : 'none'
+                                transition: !isActive ? 'all 0.25s ease' : 'none',
+                                whiteSpace: 'nowrap'
                             }}>
                                 {pair.words.join(' ')}
                             </span>

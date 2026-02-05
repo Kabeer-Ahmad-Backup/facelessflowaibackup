@@ -15,6 +15,7 @@ export type ProjectSettings = {
     imageModel: 'fal' | 'gemini' | 'runware' | 'imagen';  // Renamed from imageProvider for clarity or alias? user said "image generator". Let's stick to imageProvider to match Python script logic if possible, but valid types are key.
     audioVoice: string;
     disclaimerEnabled: boolean;
+    longSentenceBreak: boolean; // Generate 2 images for scenes with 25+ words
     captions: {
         enabled: boolean;
         position: 'bottom' | 'mid-bottom' | 'center' | 'top';
@@ -23,6 +24,7 @@ export type ProjectSettings = {
         animation: 'none' | 'typewriter' | 'fade-in' | 'slide-up' | 'bounce';
         strokeWidth: 'thin' | 'medium' | 'thick' | 'bold';
         style: 'word_pop' | 'karaoke' | 'mrbeast' | 'classic';
+        color: string; // Hex color for karaoke highlight
     };
     audioWave: {
         enabled: boolean;
@@ -60,6 +62,7 @@ export type SceneApi = {
     text: string;
     prompt: string | null;
     image_url: string | null;
+    image_url_2: string | null; // Second image for long sentences
     audio_url: string | null;
     duration: number | null;
     status: 'pending' | 'ready' | 'error';

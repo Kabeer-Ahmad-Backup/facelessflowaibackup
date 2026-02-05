@@ -92,21 +92,50 @@ export const Scene: React.FC<Props> = ({ scene, settings }) => {
         <AbsoluteFill style={{ overflow: 'hidden', ...getTransitionStyle() }}>
             {/* Background Image with Ken Burns */}
             {scene.image_url ? (
-                <AbsoluteFill style={{ transform: `scale(${scale}) translate(${translateX}px, ${translateY}px)` }}>
-                    {(scene.media_type === 'video' || scene.image_url.includes('.mp4')) ? (
-                        <Video
-                            src={scene.image_url}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            muted={true}
-                            loop
-                        />
-                    ) : (
-                        <Img
-                            src={scene.image_url}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                <>
+                    {/* First Image */}
+                    <AbsoluteFill style={{
+                        transform: `scale(${scale}) translate(${translateX}px, ${translateY}px)`,
+                        opacity: scene.image_url_2 ? interpolate(
+                            frame,
+                            [0, durationFrames * 0.45, durationFrames * 0.55],
+                            [1, 1, 0],
+                            { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+                        ) : 1
+                    }}>
+                        {(scene.media_type === 'video' || scene.image_url.includes('.mp4')) ? (
+                            <Video
+                                src={scene.image_url}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                muted={true}
+                                loop
+                            />
+                        ) : (
+                            <Img
+                                src={scene.image_url}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                        )}
+                    </AbsoluteFill>
+
+                    {/* Second Image (if exists) - for Long Sentence Break */}
+                    {scene.image_url_2 && (
+                        <AbsoluteFill style={{
+                            transform: `scale(${scale}) translate(${translateX}px, ${translateY}px)`,
+                            opacity: interpolate(
+                                frame,
+                                [0, durationFrames * 0.45, durationFrames * 0.55],
+                                [0, 0, 1],
+                                { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+                            )
+                        }}>
+                            <Img
+                                src={scene.image_url_2}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                        </AbsoluteFill>
                     )}
-                </AbsoluteFill>
+                </>
             ) : (
                 <AbsoluteFill className="bg-gray-900 flex items-center justify-center">
                     <span className="text-white">Generating Image...</span>
@@ -142,7 +171,7 @@ export const Scene: React.FC<Props> = ({ scene, settings }) => {
                     return <WordByWordPop text={scene.text} durationInSeconds={d} />;
                 } else if (captionStyle === 'karaoke') {
                     const { KaraokeHighlight } = require('./captions/KaraokeHighlight');
-                    return <KaraokeHighlight text={scene.text} durationInSeconds={d} />;
+                    return <KaraokeHighlight text={scene.text} durationInSeconds={d} color={settings.captions.color} />;
                 } else if (captionStyle === 'mrbeast') {
                     const { MrBeastStyle } = require('./captions/MrBeastStyle');
                     return <MrBeastStyle text={scene.text} durationInSeconds={d} />;

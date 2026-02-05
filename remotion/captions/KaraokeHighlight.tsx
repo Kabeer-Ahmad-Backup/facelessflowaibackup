@@ -5,9 +5,14 @@ import { estimateWordTimings, getCurrentWordIndex } from './utils';
 interface KaraokeHighlightProps {
     text: string;
     durationInSeconds: number;
+    color?: string; // Add optional color prop
 }
 
-export const KaraokeHighlight: React.FC<KaraokeHighlightProps> = ({ text, durationInSeconds }) => {
+export const KaraokeHighlight: React.FC<KaraokeHighlightProps> = ({
+    text,
+    durationInSeconds,
+    color = '#00D9FF' // Default neon blue
+}) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
     const currentTime = frame / fps;
@@ -15,8 +20,8 @@ export const KaraokeHighlight: React.FC<KaraokeHighlightProps> = ({ text, durati
     const timings = estimateWordTimings(text, durationInSeconds);
     const currentIndex = getCurrentWordIndex(timings, currentTime);
 
-    // Group words into pairs for smoother presentation
-    const pairIndex = Math.floor(currentIndex / 2);
+    // Group words into pairs
+    const currentPairIndex = Math.floor(currentIndex / 2);
 
     // Create pairs array
     const pairs: { words: string[], startTime: number, endTime: number, pairIndex: number }[] = [];
@@ -38,6 +43,24 @@ export const KaraokeHighlight: React.FC<KaraokeHighlightProps> = ({ text, durati
         }
     }
 
+    // Show only 3 pairs at a time (5-6 words total) - sliding window
+    const WINDOW_SIZE = 3;
+    const startPairIndex = Math.max(0, currentPairIndex - 1);
+    const endPairIndex = Math.min(pairs.length, startPairIndex + WINDOW_SIZE);
+    const visiblePairs = pairs.slice(startPairIndex, endPairIndex);
+
+    // Convert hex color to RGB for glow effects
+    const hexToRgb = (hex: string) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 217, b: 255 };
+    };
+
+    const rgb = hexToRgb(color);
+
     return (
         <AbsoluteFill style={{
             justifyContent: 'flex-end',
@@ -46,77 +69,93 @@ export const KaraokeHighlight: React.FC<KaraokeHighlightProps> = ({ text, durati
             pointerEvents: 'none'
         }}>
             <div style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                padding: '24px 40px',
-                borderRadius: 18,
-                maxWidth: '88%',
-                backdropFilter: 'blur(15px)',
-                border: '2px solid rgba(0, 217, 255, 0.3)',
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.8), 0 0 60px rgba(0, 217, 255, 0.15)'
+                backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                padding: '28px 48px',
+                borderRadius: 20,
+                maxWidth: '90%',
+                backdropFilter: 'blur(20px)',
+                border: `2px solid rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`,
+                boxShadow: `0 12px 48px rgba(0, 0, 0, 0.8), 0 0 80px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`
             }}>
                 <div style={{
                     display: 'flex',
-                    flexWrap: 'wrap',
                     justifyContent: 'center',
-                    gap: 18,
-                    lineHeight: 1.6
+                    alignItems: 'center',
+                    gap: 16,
+                    lineHeight: 1.7
                 }}>
-                    {pairs.map((pair) => {
-                        const isActive = pair.pairIndex === pairIndex;
-                        const isPast = pair.pairIndex < pairIndex;
+                    {visiblePairs.map((pair) => {
+                        const isActive = pair.pairIndex === currentPairIndex;
+                        const isPast = pair.pairIndex < currentPairIndex;
+                        const isFuture = pair.pairIndex > currentPairIndex;
 
                         const framesSinceActive = frame - (pair.startTime * fps);
 
-                        // Reduced bounce - gentler spring animation
+                        // Smooth spring animation
                         const scaleProgress = isActive ? spring({
                             frame: framesSinceActive,
                             fps,
-                            config: { damping: 240, stiffness: 260 }
+                            config: { damping: 220, stiffness: 280, mass: 0.6 }
                         }) : 0;
 
-                        // Reduced scale from 1.3 to 1.15
-                        const scale = isActive ? interpolate(scaleProgress, [0, 1], [1, 1.15]) : 1;
+                        // Enhanced scale effect
+                        const scale = isActive ? interpolate(scaleProgress, [0, 1], [1, 1.2]) : 1;
 
-                        // Neon blue glow animation - pulsing effect
+                        // Dynamic glow animation
                         const glowIntensity = isActive
-                            ? interpolate(framesSinceActive, [0, 8, 16], [0, 1, 0.7], {
+                            ? interpolate(framesSinceActive, [0, 6, 12, 20], [0, 1, 0.8, 0.6], {
                                 extrapolateRight: 'clamp',
                                 easing: Easing.bezier(0.4, 0, 0.2, 1)
                             })
                             : 0;
 
-                        // Enhanced neon blue for active pair
-                        const color = isActive
-                            ? '#00D9FF' // Bright neon blue
+                        // Color system
+                        const activeColor = color;
+                        const textColor = isActive
+                            ? activeColor
                             : isPast
-                                ? '#FFFFFF' // White for past
-                                : '#555555'; // Gray for future
+                                ? '#FFFFFF'
+                                : '#666666';
 
-                        // Text shadow for neon effect
+                        // Enhanced neon glow effect
                         const textShadow = isActive
                             ? `
-                                0 0 ${glowIntensity * 30}px rgba(0, 217, 255, ${glowIntensity}),
-                                0 0 ${glowIntensity * 50}px rgba(0, 217, 255, ${glowIntensity * 0.6}),
-                                0 0 ${glowIntensity * 70}px rgba(0, 217, 255, ${glowIntensity * 0.3}),
-                                3px 3px 8px rgba(0,0,0,0.9)
+                                0 0 ${glowIntensity * 40}px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${glowIntensity}),
+                                0 0 ${glowIntensity * 60}px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${glowIntensity * 0.7}),
+                                0 0 ${glowIntensity * 90}px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${glowIntensity * 0.4}),
+                                0 4px 12px rgba(0,0,0,0.9)
                             `
-                            : '3px 3px 6px rgba(0,0,0,0.9)';
+                            : '3px 3px 8px rgba(0,0,0,0.9)';
+
+                        // Subtle brightness pulse
+                        const brightness = isActive ? 1 + (glowIntensity * 0.3) : 1;
+
+                        // Opacity for future words
+                        const opacity = isFuture ? 0.4 : 1;
 
                         return (
                             <span
                                 key={pair.pairIndex}
                                 style={{
                                     fontFamily: 'Inter, Arial, sans-serif',
-                                    fontSize: 52,
+                                    fontSize: 56,
                                     fontWeight: isActive ? 900 : 600,
-                                    color,
+                                    color: textColor,
                                     transform: `scale(${scale})`,
                                     display: 'inline-block',
-                                    transition: !isActive ? 'color 0.25s ease, transform 0.25s ease' : 'none',
+                                    transition: !isActive ? 'color 0.3s ease, transform 0.3s ease, margin 0.3s ease' : 'margin 0.3s ease',
                                     textShadow,
-                                    letterSpacing: isActive ? '1.5px' : '0.5px',
+                                    letterSpacing: isActive ? '2px' : '0.8px',
                                     position: 'relative',
-                                    filter: isActive ? `brightness(${1 + glowIntensity * 0.3})` : 'none'
+                                    filter: `brightness(${brightness})`,
+                                    textTransform: 'uppercase',
+                                    whiteSpace: 'nowrap',
+                                    opacity,
+                                    // Add extra margin to push other words away when active
+                                    // Increased margin significantly to prevent overlap
+                                    margin: isActive ? '0 50px' : '0',
+                                    // Higher z-index for active words  
+                                    zIndex: isActive ? 10 : 1
                                 }}
                             >
                                 {pair.words.join(' ')}

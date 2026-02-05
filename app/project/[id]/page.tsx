@@ -682,17 +682,31 @@ export default function ProjectPage() {
                                         }}
                                     >
                                         {scene.image_url ? (
-                                            (scene.media_type === 'video' || scene.image_url.includes('.mp4')) ? (
-                                                <video
-                                                    src={scene.image_url}
-                                                    className="w-full h-full object-cover"
-                                                    muted
-                                                    loop
-                                                    autoPlay
-                                                    playsInline
-                                                />
+                                            scene.image_url_2 ? (
+                                                // Dual image display - stacked vertically
+                                                <div className="w-full h-full flex flex-col">
+                                                    <div className="w-full h-1/2 relative">
+                                                        <img src={scene.image_url} className="w-full h-full object-cover" alt={`Scene ${idx + 1} - Image 1`} />
+                                                        <div className="absolute top-0 right-0 bg-orange-500/90 px-1.5 py-0.5 text-[9px] text-white font-bold rounded-bl">1</div>
+                                                    </div>
+                                                    <div className="w-full h-1/2 relative border-t-2 border-orange-500/60">
+                                                        <img src={scene.image_url_2} className="w-full h-full object-cover" alt={`Scene ${idx + 1} - Image 2`} />
+                                                        <div className="absolute top-0 right-0 bg-orange-500/90 px-1.5 py-0.5 text-[9px] text-white font-bold rounded-bl">2</div>
+                                                    </div>
+                                                </div>
                                             ) : (
-                                                <img src={scene.image_url} className="w-full h-full object-cover" alt={`Scene ${idx + 1}`} />
+                                                (scene.media_type === 'video' || scene.image_url.includes('.mp4')) ? (
+                                                    <video
+                                                        src={scene.image_url}
+                                                        className="w-full h-full object-cover"
+                                                        muted
+                                                        loop
+                                                        autoPlay
+                                                        playsInline
+                                                    />
+                                                ) : (
+                                                    <img src={scene.image_url} className="w-full h-full object-cover" alt={`Scene ${idx + 1}`} />
+                                                )
                                             )
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-red-500 bg-red-500/10">
