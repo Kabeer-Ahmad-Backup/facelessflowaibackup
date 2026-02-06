@@ -80,8 +80,24 @@ export default function ProjectPage() {
             .on('postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'scenes', filter: `project_id=eq.${projectId}` },
                 (payload) => {
-                    console.log('Scene updated:', payload.new);
-                    setScenes(prev => prev.map(s => s.id === payload.new.id ? payload.new as SceneApi : s));
+                    console.log('Scene updated via real-time:', payload.new);
+                    const updatedScene = payload.new as SceneApi;
+                    console.log('Image URLs:', {
+                        image_url: updatedScene.image_url,
+                        image_url_2: updatedScene.image_url_2
+                    });
+
+                    // Force update with new object reference to trigger re-render
+                    setScenes(prev => {
+                        const newScenesList = prev.map(s => {
+                            if (s.id === updatedScene.id) {
+                                return { ...updatedScene }; // Create new object reference
+                            }
+                            return s;
+                        });
+                        console.log('Updated scenes list:', newScenesList.length);
+                        return newScenesList;
+                    });
                 })
             .on('postgres_changes',
                 { event: 'DELETE', schema: 'public', table: 'scenes', filter: `project_id=eq.${projectId}` },
