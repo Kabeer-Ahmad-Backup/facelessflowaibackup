@@ -383,8 +383,93 @@ export default function ProjectPage() {
         }
     };
 
+    // Validate all scene media before export
+    const validateSceneMedia = async (): Promise<{ valid: boolean; errors: string[] }> => {
+        const errors: string[] = [];
+
+        for (const scene of scenes) {
+            const sceneNum = scene.order_index + 1;
+
+            // Check image_url
+            if (scene.image_url) {
+                try {
+                    const response = await fetch(scene.image_url, { method: 'HEAD' });
+                    const contentLength = response.headers.get('content-length');
+
+                    if (!response.ok) {
+                        errors.push(`Scene ${sceneNum}: Image not accessible (${response.status})`);
+                    } else if (contentLength && parseInt(contentLength) === 0) {
+                        errors.push(`Scene ${sceneNum}: Image file is empty (0 bytes)`);
+                    }
+                } catch (e) {
+                    errors.push(`Scene ${sceneNum}: Cannot access image`);
+                }
+            } else {
+                errors.push(`Scene ${sceneNum}: Missing image`);
+            }
+
+            // Check image_url_2 if exists
+            if (scene.image_url_2) {
+                try {
+                    const response = await fetch(scene.image_url_2, { method: 'HEAD' });
+                    const contentLength = response.headers.get('content-length');
+
+                    if (!response.ok) {
+                        errors.push(`Scene ${sceneNum}: Second image not accessible (${response.status})`);
+                    } else if (contentLength && parseInt(contentLength) === 0) {
+                        errors.push(`Scene ${sceneNum}: Second image file is empty (0 bytes)`);
+                    }
+                } catch (e) {
+                    errors.push(`Scene ${sceneNum}: Cannot access second image`);
+                }
+            }
+
+            // Check audio_url
+            if (scene.audio_url) {
+                try {
+                    const response = await fetch(scene.audio_url, { method: 'HEAD' });
+                    const contentLength = response.headers.get('content-length');
+
+                    if (!response.ok) {
+                        errors.push(`Scene ${sceneNum}: Audio not accessible (${response.status})`);
+                    } else if (contentLength && parseInt(contentLength) === 0) {
+                        errors.push(`Scene ${sceneNum}: Audio file is empty (0 bytes)`);
+                    }
+                } catch (e) {
+                    errors.push(`Scene ${sceneNum}: Cannot access audio`);
+                }
+            } else {
+                errors.push(`Scene ${sceneNum}: Missing audio`);
+            }
+        }
+
+        return { valid: errors.length === 0, errors };
+    };
+
     const handleExportVideo = async (part?: number) => {
         if (!project) return;
+
+        // Validate all scene media before export
+        toast.info('Validating media files...');
+        const validation = await validateSceneMedia();
+
+        if (!validation.valid) {
+            console.error('Media validation failed:', validation.errors);
+            toast.error(
+                <div>
+                    <div className="font-bold mb-2">Cannot export - Media validation failed:</div>
+                    <ul className="list-disc pl-4 text-sm">
+                        {validation.errors.slice(0, 5).map((err, i) => <li key={i}>{err}</li>)}
+                        {validation.errors.length > 5 && <li>...and {validation.errors.length - 5} more issues</li>}
+                    </ul>
+                    <div className="mt-2 text-xs">Please use Continue/Fix to regenerate problematic scenes.</div>
+                </div>,
+                { duration: 10000 }
+            );
+            return;
+        }
+
+        toast.success('All media files validated successfully!');
 
         // Optimistic update for UI state (local only, real update comes from API/polling)
         // If part is specific, we might track its local loading state if needed, 

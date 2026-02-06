@@ -56,19 +56,47 @@ export async function generateScene(
             throw new Error("Insufficient credits");
         }
 
-        // 3. Initiate Scene in DB (Pending)
-        const { data: newScene, error: initError } = await supabase
+        // 3. Check for Existing Scene by order_index (for Continue/Fix scenarios)
+        const { data: existingScenes } = await supabase
             .from('scenes')
-            .insert({
-                project_id: projectId,
-                order_index: sceneIndex,
-                text,
-                status: 'pending'
-            })
             .select()
-            .single();
+            .eq('project_id', projectId)
+            .eq('order_index', sceneIndex);
 
-        if (initError) throw initError;
+        let newScene: SceneApi;
+
+        if (existingScenes && existingScenes.length > 0) {
+            // Update existing scene
+            console.log(`Updating existing scene at index ${sceneIndex}`);
+            const { data: updatedScene, error: updateError } = await supabase
+                .from('scenes')
+                .update({
+                    text,
+                    status: 'pending'
+                })
+                .eq('id', existingScenes[0].id)
+                .select()
+                .single();
+
+            if (updateError) throw updateError;
+            newScene = updatedScene as SceneApi;
+        } else {
+            // Insert new scene
+            console.log(`Creating new scene at index ${sceneIndex}`);
+            const { data: insertedScene, error: initError } = await supabase
+                .from('scenes')
+                .insert({
+                    project_id: projectId,
+                    order_index: sceneIndex,
+                    text,
+                    status: 'pending'
+                })
+                .select()
+                .single();
+
+            if (initError) throw initError;
+            newScene = insertedScene as SceneApi;
+        }
 
         try {
 
