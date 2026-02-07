@@ -552,98 +552,111 @@ export default function ProjectPage() {
                         </button>
                     )}
                     {/* SPLIT EXPORT UI */}
-                    {scenes.length > 200 ? (
-                        <div className="flex flex-col gap-1 items-end">
-                            <span className="text-[10px] text-stone-500 font-mono">Multi-Part Export ({scenes.length} Scenes)</span>
-                            <div className="flex flex-wrap gap-2 justify-end max-w-md">
-                                {Array.from({ length: Math.ceil(scenes.length / 200) }).map((_, idx) => {
-                                    const partNum = idx + 1;
-                                    const partData = project.settings.renderParts?.find((p: any) => p.part === partNum);
+                    {(() => {
+                        // Match backend logic for MAX_SCENES
+                        const isStockMode = ['stock_natural', 'stock_vector', 'stock_art'].includes(project.settings.visualStyle || '');
+                        const MAX_SCENES = isStockMode ? 80 : 200;
+                        const totalParts = Math.ceil(scenes.length / MAX_SCENES);
 
-                                    // 1. URL Existence (Top Priority)
-                                    const hasUrl = Boolean(partData?.url);
+                        if (scenes.length > MAX_SCENES) {
+                            return (
+                                <div className="flex flex-col gap-1 items-end">
+                                    <span className="text-[10px] text-stone-500 font-mono">Multi-Part Export ({scenes.length} Scenes, {totalParts} Parts)</span>
+                                    <div className="flex flex-wrap gap-2 justify-end max-w-md">
+                                        {Array.from({ length: totalParts }).map((_, idx) => {
+                                            const partNum = idx + 1;
+                                            const partData = project.settings.renderParts?.find((p: any) => p.part === partNum);
 
-                                    // 2. Formatting Check (Fallback is status)
-                                    // Use local logic strictly: valid status === rendering implies rendering
-                                    // AND checks if we actually have a renderId (job exists)
-                                    const isRendering = !hasUrl && partData?.status === 'rendering' && Boolean(partData?.renderId);
+                                            // 1. URL Existence (Top Priority)
+                                            const hasUrl = Boolean(partData?.url);
 
-                                    return (
-                                        <div key={partNum} className="flex items-center gap-1 bg-stone-900/50 p-1 rounded border border-white/5">
-                                            <span className="text-[10px] text-stone-500 font-bold px-1">P{partNum}</span>
-                                            {hasUrl ? (
-                                                <a
-                                                    href={partData?.url} // Fixed TS error
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] flex items-center gap-1"
-                                                >
-                                                    <Download size={10} />
-                                                </a>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleExportVideo(partNum)}
-                                                    disabled={isRendering}
-                                                    className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-colors ${isRendering
-                                                        ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
-                                                        : 'bg-stone-800 hover:bg-stone-700 text-stone-300 border border-white/10'
-                                                        }`}
-                                                    title={isRendering ? "Rendering..." : "Export this part"}
-                                                >
-                                                    {isRendering ? (
-                                                        <div className="flex items-center gap-1">
-                                                            <Loader2 className="animate-spin" size={10} />
-                                                            {(partData as any)?.progress > 0 && (
-                                                                <span className="tabular-nums font-mono">{Math.round((partData as any).progress * 100)}%</span>
-                                                            )}
-                                                        </div>
+                                            // 2. Formatting Check (Fallback is status)
+                                            // Use local logic strictly: valid status === rendering implies rendering
+                                            // AND checks if we actually have a renderId (job exists)
+                                            const isRendering = !hasUrl && partData?.status === 'rendering' && Boolean(partData?.renderId);
+
+                                            return (
+                                                <div key={partNum} className="flex items-center gap-1 bg-stone-900/50 p-1 rounded border border-white/5">
+                                                    <span className="text-[10px] text-stone-500 font-bold px-1">P{partNum}</span>
+                                                    {hasUrl ? (
+                                                        <a
+                                                            href={partData?.url} // Fixed TS error
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] flex items-center gap-1"
+                                                        >
+                                                            <Download size={10} />
+                                                        </a>
                                                     ) : (
-                                                        <Play size={10} />
+                                                        <button
+                                                            onClick={() => handleExportVideo(partNum)}
+                                                            disabled={isRendering}
+                                                            className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-colors ${isRendering
+                                                                ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
+                                                                : 'bg-stone-800 hover:bg-stone-700 text-stone-300 border border-white/10'
+                                                                }`}
+                                                            title={isRendering ? "Rendering..." : "Export this part"}
+                                                        >
+                                                            {isRendering ? (
+                                                                <div className="flex items-center gap-1">
+                                                                    <Loader2 className="animate-spin" size={10} />
+                                                                    {(partData as any)?.progress > 0 && (
+                                                                        <span className="tabular-nums font-mono">{Math.round((partData as any).progress * 100)}%</span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <Play size={10} />
+                                                            )}
+                                                            {isRendering ? '' : 'Export'}
+                                                        </button>
                                                     )}
-                                                    {isRendering ? '' : 'Export'}
-                                                </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        } else if (project.video_url) {
+                            return (
+                                <a
+                                    href={project.video_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                                >
+                                    <Download size={16} />
+                                    Download Video
+                                </a>
+                            );
+                        } else {
+                            return (
+                                <button
+                                    onClick={() => handleExportVideo()}
+                                    disabled={rendering || project.status === 'rendering' || scenes.filter(s => s.status === 'ready').length === 0}
+                                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                                >
+                                    {rendering || project.status === 'rendering' ? (
+                                        <div className="flex flex-col items-start text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 size={16} className="animate-spin" />
+                                                <span>Rendering...</span>
+                                            </div>
+                                            {renderProgress && renderProgress.progress > 0 && (
+                                                <span className="text-white/70 ml-6 text-[10px]">
+                                                    {Math.round(renderProgress.progress * 100)}%
+                                                </span>
                                             )}
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ) : project.video_url ? (
-                        <a
-                            href={project.video_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-                        >
-                            <Download size={16} />
-                            Download Video
-                        </a>
-                    ) : (
-                        <button
-                            onClick={() => handleExportVideo()}
-                            disabled={rendering || project.status === 'rendering' || scenes.filter(s => s.status === 'ready').length === 0}
-                            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-                        >
-                            {rendering || project.status === 'rendering' ? (
-                                <div className="flex flex-col items-start text-xs">
-                                    <div className="flex items-center gap-2">
-                                        <Loader2 size={16} className="animate-spin" />
-                                        <span>Rendering...</span>
-                                    </div>
-                                    {renderProgress && renderProgress.progress > 0 && (
-                                        <span className="text-white/70 ml-6 text-[10px]">
-                                            {Math.round(renderProgress.progress * 100)}%
-                                        </span>
+                                    ) : (
+                                        <>
+                                            <Download size={16} />
+                                            Export Video
+                                        </>
                                     )}
-                                </div>
-                            ) : (
-                                <>
-                                    <Download size={16} />
-                                    Export Video
-                                </>
-                            )}
-                        </button>
-                    )}
+                                </button>
+                            );
+                        }
+                    })()}
                     <div className="flex items-center gap-2">
                         {(project.status === 'rendering' || project.status === 'error') && (
                             <button
@@ -690,7 +703,7 @@ export default function ProjectPage() {
                         </div>
                     </div>
                 </div>
-            </header>
+            </header >
 
             {showScript && (
                 <div className="border-b border-white/5 bg-stone-900/30 p-6 animate-in slide-in-from-top-2 max-h-[60vh] overflow-y-auto">
@@ -702,42 +715,45 @@ export default function ProjectPage() {
                         <p className="text-stone-300 font-serif leading-relaxed opacity-80 max-w-4xl">{project.script}</p>
                     </div>
                 </div>
-            )}
+            )
+            }
 
-            {showCredits && (
-                <div className="border-b border-white/5 bg-stone-900/30 p-6 animate-in slide-in-from-top-2">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-orange-400 flex items-center gap-2">
-                            <Sparkles size={14} /> Artist Credits
-                        </h3>
-                        <button
-                            onClick={() => {
-                                const text = scenes
-                                    .filter(s => s.attribution)
-                                    .map(s => `${s.attribution}`)
-                                    .join('\n');
-                                navigator.clipboard.writeText("Credits:\n" + text);
-                                toast.success("Credits copied to clipboard!");
-                            }}
-                            className="text-xs bg-stone-800 hover:bg-stone-700 px-3 py-1.5 rounded transition-colors"
-                        >
-                            Copy All
-                        </button>
+            {
+                showCredits && (
+                    <div className="border-b border-white/5 bg-stone-900/30 p-6 animate-in slide-in-from-top-2">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-semibold uppercase tracking-wider text-orange-400 flex items-center gap-2">
+                                <Sparkles size={14} /> Artist Credits
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    const text = scenes
+                                        .filter(s => s.attribution)
+                                        .map(s => `${s.attribution}`)
+                                        .join('\n');
+                                    navigator.clipboard.writeText("Credits:\n" + text);
+                                    toast.success("Credits copied to clipboard!");
+                                }}
+                                className="text-xs bg-stone-800 hover:bg-stone-700 px-3 py-1.5 rounded transition-colors"
+                            >
+                                Copy All
+                            </button>
+                        </div>
+                        <div className="bg-black/50 p-4 rounded-lg font-mono text-xs text-stone-400 whitespace-pre-wrap select-all">
+                            {scenes.filter(s => s.attribution).length > 0 ? (
+                                <>
+                                    <div className="mb-2 text-stone-500">// Copy and paste into your video description</div>
+                                    {scenes.filter(s => s.attribution).map((s, i) => (
+                                        <div key={s.id}>{s.attribution}</div>
+                                    ))}
+                                </>
+                            ) : (
+                                <div className="text-stone-600">No artist attributions found for these scenes.</div>
+                            )}
+                        </div>
                     </div>
-                    <div className="bg-black/50 p-4 rounded-lg font-mono text-xs text-stone-400 whitespace-pre-wrap select-all">
-                        {scenes.filter(s => s.attribution).length > 0 ? (
-                            <>
-                                <div className="mb-2 text-stone-500">// Copy and paste into your video description</div>
-                                {scenes.filter(s => s.attribution).map((s, i) => (
-                                    <div key={s.id}>{s.attribution}</div>
-                                ))}
-                            </>
-                        ) : (
-                            <div className="text-stone-600">No artist attributions found for these scenes.</div>
-                        )}
-                    </div>
-                </div>
-            )}
+                )
+            }
 
 
             <div className="flex flex-1 overflow-hidden">
@@ -1251,30 +1267,32 @@ export default function ProjectPage() {
             />
 
             {/* Image Preview Modal */}
-            {previewImage && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-                    onClick={() => setPreviewImage(null)}
-                >
-                    <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
-                        <img
-                            src={previewImage}
-                            alt="Scene preview"
-                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                        <button
-                            onClick={() => setPreviewImage(null)}
-                            className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+            {
+                previewImage && (
+                    <div
+                        className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+                            <img
+                                src={previewImage}
+                                alt="Scene preview"
+                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                            <button
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
 
