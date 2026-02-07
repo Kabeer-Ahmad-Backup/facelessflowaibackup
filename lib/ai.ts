@@ -26,112 +26,117 @@ export async function uploadToStorage(buffer: ArrayBuffer | Buffer, projectId: s
 
 import { parseBuffer } from 'music-metadata';
 
-export async function generateMinimaxAudio(text: string, voiceId: string = "male-qn-qingse", projectId: string, sceneIndex: number): Promise<{ url: string, duration: number }> {
-    // Extract Group ID from JWT Token (Minimax API Key)
-    let groupId = process.env.MINIMAX_GROUP_ID;
-    if (!groupId && process.env.MINIMAX_API_KEY) {
-        try {
-            const token = process.env.MINIMAX_API_KEY;
-            const parts = token.split('.');
-            if (parts.length === 3) {
-                const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-                if (payload.GroupID) {
-                    groupId = payload.GroupID;
-                }
-            }
-        } catch (e) {
-            console.warn("Failed to extract GroupID from MINIMAX_API_KEY", e);
+import keyRotation from './keyRotation';
+
+// Helper to extract GroupID from Minimax JWT token
+function extractGroupId(apiKey: string): string | null {
+    try {
+        const parts = apiKey.split('.');
+        if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+            return payload.GroupID || null;
         }
+    } catch (e) {
+        console.warn("Failed to extract GroupID from Minimax API Key", e);
     }
-
-    if (!groupId) throw new Error("MINIMAX_GROUP_ID is missing and could not be extracted from API Key");
-
-    // Model changed to match Python script (speech-2.6-hd)
-    // Note: The Python script doesn't pass GroupId in query for 2.6-hd, but library/doc usually says it's needed for T2A V2. 
-    // We will keep passing it as it's safer.
-    const url = "https://api.minimax.io/v1/t2a_v2?GroupId=" + groupId;
-
-    const payload = {
-        "model": "speech-01-turbo", // Staying with 01-turbo for T2A V2 endpoint
-        "text": text,
-        "stream": false,
-        "voice_setting": {
-            "voice_id": voiceId, // Will pass mapped ID
-            "speed": 1.0,
-            "vol": 1.0,
-            "pitch": 0
-        },
-        "audio_setting": {
-            "sample_rate": 32000,
-            "bitrate": 128000,
-            "format": "mp3",
-            "channel": 1
-        }
-    };
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${process.env.MINIMAX_API_KEY}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        throw new Error(`Minimax API Error: ${response.status} ${await response.text()}`);
-    }
-
-    const data = await response.json();
-    if (data.base_resp?.status_code !== 0) {
-        throw new Error(`Minimax API Logic Error: ${data.base_resp?.status_msg}`);
-    }
-
-    // Minimax returns hex string of audio data? Or url? 
-    let hexAudio = data.data?.audio || data.audio; // Handle both structures
-
-    // If it returns a URL (rare for this endpoint but possible)
-    if (!hexAudio && (data.data?.audio_url || data.audio_url)) {
-        const audioUrl = data.data?.audio_url || data.audio_url;
-        const audioResp = await fetch(audioUrl);
-        const arrayBuffer = await audioResp.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Parse Duration
-        const metadata = await parseBuffer(buffer, 'audio/mpeg');
-        const duration = metadata.format.duration || 5;
-
-        const publicUrl = await uploadToStorage(
-            buffer,
-            projectId,
-            `audio/scene_${sceneIndex}_${Date.now()}.mp3`,
-            'audio/mpeg'
-        );
-        return { url: publicUrl, duration };
-    }
-
-    if (!hexAudio) {
-        console.error("Minimax Response", data);
-        throw new Error("No audio data received from Minimax");
-    }
-
-    // Convert Hex to Buffer
-    const buffer = Buffer.from(hexAudio, 'hex');
-
-    // Parse Duration
-    const metadata = await parseBuffer(buffer, 'audio/mpeg');
-    const duration = metadata.format.duration || 5;
-
-    // Upload
-    const publicUrl = await uploadToStorage(
-        buffer,
-        projectId,
-        `audio/scene_${sceneIndex}_${Date.now()}.mp3`,
-        'audio/mpeg'
-    );
-    return { url: publicUrl, duration };
+    return null;
 }
 
+export async function generateMinimaxAudio(text: string, voiceId: string = "male-qn-qingse", projectId: string, sceneIndex: number): Promise<{ url: string, duration: number }> {
+    // Use retry wrapper with key rotation
+    return await keyRotation.withRetry(
+        async (apiKey) => {
+            // Extract Group ID from JWT Token (Minimax API Key)
+            let groupId = process.env.MINIMAX_GROUP_ID || extractGroupId(apiKey);
+
+            if (!groupId) {
+                throw new Error("MINIMAX_GROUP_ID is missing and could not be extracted from API Key");
+            }
+
+            const url = "https://api.minimax.io/v1/t2a_v2?GroupId=" + groupId;
+
+            const payload = {
+                "model": "speech-01-turbo",
+                "text": text,
+                "stream": false,
+                "voice_setting": {
+                    "voice_id": voiceId,
+                    "speed": 1.0,
+                    "vol": 1.0,
+                    "pitch": 0
+                },
+                "audio_setting": {
+                    "sample_rate": 32000,
+                    "bitrate": 128000,
+                    "format": "mp3",
+                    "channel": 1
+                }
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Minimax API Error: ${response.status} ${await response.text()}`);
+            }
+
+            const data = await response.json();
+            if (data.base_resp?.status_code !== 0) {
+                throw new Error(`Minimax API Logic Error: ${data.base_resp?.status_msg}`);
+            }
+
+            // Minimax returns hex string of audio data
+            let hexAudio = data.data?.audio || data.audio;
+
+            // If it returns a URL (rare for this endpoint but possible)
+            if (!hexAudio && (data.data?.audio_url || data.audio_url)) {
+                const audioUrl = data.data?.audio_url || data.audio_url;
+                const audioResp = await fetch(audioUrl);
+                const arrayBuffer = await audioResp.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+
+                const metadata = await parseBuffer(buffer, 'audio/mpeg');
+                const duration = metadata.format.duration || 5;
+
+                const publicUrl = await uploadToStorage(
+                    buffer,
+                    projectId,
+                    `audio/scene_${sceneIndex}_${Date.now()}.mp3`,
+                    'audio/mpeg'
+                );
+                return { url: publicUrl, duration };
+            }
+
+            if (!hexAudio) {
+                console.error("Minimax Response", data);
+                throw new Error("No audio data received from Minimax");
+            }
+
+            // Convert Hex to Buffer
+            const buffer = Buffer.from(hexAudio, 'hex');
+
+            // Parse Duration
+            const metadata = await parseBuffer(buffer, 'audio/mpeg');
+            const duration = metadata.format.duration || 5;
+
+            // Upload
+            const publicUrl = await uploadToStorage(
+                buffer,
+                projectId,
+                `audio/scene_${sceneIndex}_${Date.now()}.mp3`,
+                'audio/mpeg'
+            );
+            return { url: publicUrl, duration };
+        },
+        () => keyRotation.getNextMinimaxKey()
+    );
+}
 
 export async function generateFalImage(prompt: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9'): Promise<string> {
     // Using fal-ai/recraft-v3 or flux as per modern standards, mimicking python's fal logic
@@ -213,97 +218,91 @@ export async function generateFalImage(prompt: string, projectId: string, sceneI
 }
 
 export async function generateRunwareImage(prompt: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9', modelId?: string, referenceImageId?: string): Promise<string> {
-    const runware = new Runware({ apiKey: process.env.RUNWARE_API_KEY! });
+    // Use retry wrapper with key rotation
+    return await keyRotation.withRetry(
+        async (apiKey) => {
+            const runware = new Runware({ apiKey });
 
-    try {
-        // Calculate dimensions based on aspect ratio (matching Python implementation)
-        let width, height;
-        if (aspectRatio === '9:16') {
-            width = 768;
-            height = 1344;
-        } else if (aspectRatio === '1:1') {
-            width = 1024;
-            height = 1024;
-        } else { // 16:9 default
-            width = 1344;
-            height = 768;
-        }
-
-        console.log(`Generating Runware image with dimensions: ${width}x${height} (${aspectRatio}) using model ${modelId || "runware:100@1"}`);
-        if (referenceImageId) console.log(`Using Reference Image: ${referenceImageId}`);
-
-        let effectiveReferenceImageId = referenceImageId;
-
-        // Handle local file paths (starting with /)
-        if (referenceImageId && referenceImageId.startsWith('/')) {
-            try {
-                // Build full URL for HTTP fetch (works in both local and production)
-                const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-                    (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ||
-                    'http://localhost:3000';
-
-                const imageUrl = `${baseUrl}${referenceImageId}`;
-                console.log(`Fetching reference image via HTTP: ${imageUrl}`);
-
-                // Fetch image via HTTP
-                const imageResponse = await fetch(imageUrl);
-                if (!imageResponse.ok) {
-                    throw new Error(`Failed to fetch image: ${imageResponse.status}`);
-                }
-
-                const imageBuffer = await imageResponse.arrayBuffer();
-                const base64Image = Buffer.from(imageBuffer).toString('base64');
-
-                // Determine mime type from response headers or file extension
-                const contentType = imageResponse.headers.get('content-type') || 'image/png';
-                const dataUri = `data:${contentType};base64,${base64Image}`;
-
-                // Upload to Runware
-                const uploadResult = await runware.imageUpload({
-                    image: dataUri
-                });
-
-                if (uploadResult && uploadResult.imageUUID) {
-                    console.log(`Uploaded Reference Image UUID: ${uploadResult.imageUUID}`);
-                    effectiveReferenceImageId = String(uploadResult.imageUUID);
-                } else {
-                    console.warn("Runware Upload Failed or returned no UUID", uploadResult);
-                }
-            } catch (uploadError) {
-                console.error("Failed to upload reference image via HTTP:", uploadError);
+            // Calculate dimensions based on aspect ratio
+            let width, height;
+            if (aspectRatio === '9:16') {
+                width = 768;
+                height = 1344;
+            } else if (aspectRatio === '1:1') {
+                width = 1024;
+                height = 1024;
+            } else { // 16:9 default
+                width = 1344;
+                height = 768;
             }
-        }
 
-        const results = await runware.imageInference({
-            positivePrompt: prompt,
-            model: modelId || "runware:100@1",
-            width,
-            height,
-            numberResults: 1,
-            // Assuming the SDK and Model support 'seedImage' or 'inputImage'. 
-            // For custom models on Runware, it's often passed via specific parameters or LoRA logic. 
-            // If this is a direct reference image feature:
-            ...(effectiveReferenceImageId ? {
-                referenceImages: [effectiveReferenceImageId]
-            } : {})
-        });
+            console.log(`Generating Runware image with dimensions: ${width}x${height} (${aspectRatio}) using model ${modelId || "runware:100@1"}`);
+            if (referenceImageId) console.log(`Using Reference Image: ${referenceImageId}`);
 
-        if (results && results.length > 0 && results[0].imageURL) {
-            const finalUrl = results[0].imageURL;
-            const imgResp = await fetch(finalUrl);
-            const imgBuffer = await imgResp.arrayBuffer();
-            return await uploadToStorage(
-                Buffer.from(imgBuffer),
-                projectId,
-                `images/scene_${sceneIndex}_${Date.now()}.jpg`,
-                'image/jpeg'
-            );
-        }
-        throw new Error("No image returned from Runware");
-    } finally {
-        // Keeping connection management simple for now
-    }
+            let effectiveReferenceImageId = referenceImageId;
+
+            // Handle local file paths (starting with /)
+            if (referenceImageId && referenceImageId.startsWith('/')) {
+                try {
+                    // Build full URL for HTTP fetch
+                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+                        (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ||
+                        'http://localhost:3000';
+
+                    const imageUrl = `${baseUrl}${referenceImageId}`;
+                    console.log(`Fetching reference image via HTTP: ${imageUrl}`);
+
+                    const imageResponse = await fetch(imageUrl);
+                    if (!imageResponse.ok) {
+                        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+                    }
+
+                    const imageBuffer = await imageResponse.arrayBuffer();
+                    const base64Image = Buffer.from(imageBuffer).toString('base64');
+                    const contentType = imageResponse.headers.get('content-type') || 'image/png';
+                    const dataUri = `data:${contentType};base64,${base64Image}`;
+
+                    const uploadResult = await runware.imageUpload({ image: dataUri });
+
+                    if (uploadResult && uploadResult.imageUUID) {
+                        console.log(`Uploaded Reference Image UUID: ${uploadResult.imageUUID}`);
+                        effectiveReferenceImageId = String(uploadResult.imageUUID);
+                    } else {
+                        console.warn("Runware Upload Failed or returned no UUID", uploadResult);
+                    }
+                } catch (uploadError) {
+                    console.error("Failed to upload reference image via HTTP:", uploadError);
+                }
+            }
+
+            const results = await runware.imageInference({
+                positivePrompt: prompt,
+                model: modelId || "runware:100@1",
+                width,
+                height,
+                numberResults: 1,
+                ...(effectiveReferenceImageId ? {
+                    referenceImages: [effectiveReferenceImageId]
+                } : {})
+            });
+
+            if (results && results.length > 0 && results[0].imageURL) {
+                const finalUrl = results[0].imageURL;
+                const imgResp = await fetch(finalUrl);
+                const imgBuffer = await imgResp.arrayBuffer();
+                return await uploadToStorage(
+                    Buffer.from(imgBuffer),
+                    projectId,
+                    `images/scene_${sceneIndex}_${Date.now()}.jpg`,
+                    'image/jpeg'
+                );
+            }
+            throw new Error("No image returned from Runware");
+        },
+        () => keyRotation.getNextRunwareKey()
+    );
 }
+
 
 export async function generateGeminiImage(prompt: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9'): Promise<string> {
     // Using Google Generative AI Node SDK for gemini-2.5-flash-image (Experimental/Multimodal)

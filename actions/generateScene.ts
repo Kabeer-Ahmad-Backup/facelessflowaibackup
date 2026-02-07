@@ -15,9 +15,12 @@ const adminSupabase = createAdminClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY!,
-});
+import keyRotation from '@/lib/keyRotation';
+
+// Dynamic OpenAI client creation with rotated key
+function getOpenAIClient(apiKey: string) {
+    return new OpenAI({ apiKey });
+}
 
 export type GenerateSceneResult = {
     success: boolean;
@@ -115,16 +118,23 @@ RULES:
 
 Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
 
-            const promptResponse = await openai.chat.completions.create({
-                model: "gpt-4o",
-                messages: [{
-                    role: "system",
-                    content: baseInstructions
-                }, {
-                    role: "user",
-                    content: `Sentence: "${text}"`
-                }]
-            });
+            // 4. Generate Simple Scene Description (OpenAI) with retry
+            const promptResponse = await keyRotation.withRetry(
+                async (apiKey) => {
+                    const openai = getOpenAIClient(apiKey);
+                    return await openai.chat.completions.create({
+                        model: "gpt-4o",
+                        messages: [{
+                            role: "system",
+                            content: baseInstructions
+                        }, {
+                            role: "user",
+                            content: `Sentence: "${text}"`
+                        }]
+                    });
+                },
+                () => keyRotation.getNextOpenAIKey()
+            );
 
             // Parse Response
             let simplePrompt = text;
@@ -308,21 +318,27 @@ No text in image.`;
             if (settings.longSentenceBreak && wordCount > 20 && mediaType === 'image') {
                 console.log(`Scene has ${wordCount} words - generating second image for variety`);
                 try {
-                    // Generate a different prompt for the second image
-                    const prompt2Response = await openai.chat.completions.create({
-                        model: 'gpt-4o-mini',
-                        messages: [
-                            {
-                                role: 'system',
-                                content: 'You are a prompt generator for visual scenes. Generate a visual scene description that is DIFFERENT from the first one but still related to the same topic. Return ONLY a single sentence visual description, no JSON.'
-                            },
-                            {
-                                role: 'user',
-                                content: `Create a second, different visual description for: ${text}. Make it complementary but different from: ${simplePrompt}`
-                            }
-                        ],
-                        temperature: 0.9, // Higher temp for more variety
-                    });
+                    // Generate a different prompt for the second image with retry
+                    const prompt2Response = await keyRotation.withRetry(
+                        async (apiKey) => {
+                            const openai = getOpenAIClient(apiKey);
+                            return await openai.chat.completions.create({
+                                model: 'gpt-4o-mini',
+                                messages: [
+                                    {
+                                        role: 'system',
+                                        content: 'You are a prompt generator for visual scenes. Generate a visual scene description that is DIFFERENT from the first one but still related to the same topic. Return ONLY a single sentence visual description, no JSON.'
+                                    },
+                                    {
+                                        role: 'user',
+                                        content: `Create a second, different visual description for: ${text}. Make it complementary but different from: ${simplePrompt}`
+                                    }
+                                ],
+                                temperature: 0.9, // Higher temp for more variety
+                            });
+                        },
+                        () => keyRotation.getNextOpenAIKey()
+                    );
 
                     const simplePrompt2 = prompt2Response.choices[0].message.content?.trim() || simplePrompt;
                     const fullPrompt2 = `${simplePrompt2} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
