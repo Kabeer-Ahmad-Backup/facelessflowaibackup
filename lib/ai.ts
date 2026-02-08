@@ -28,29 +28,15 @@ import { parseBuffer } from 'music-metadata';
 
 import keyRotation from './keyRotation';
 
-// Helper to extract GroupID from Minimax JWT token
-function extractGroupId(apiKey: string): string | null {
-    try {
-        const parts = apiKey.split('.');
-        if (parts.length === 3) {
-            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-            return payload.GroupID || null;
-        }
-    } catch (e) {
-        console.warn("Failed to extract GroupID from Minimax API Key", e);
-    }
-    return null;
-}
-
 export async function generateMinimaxAudio(text: string, voiceId: string = "male-qn-qingse", projectId: string, sceneIndex: number): Promise<{ url: string, duration: number }> {
     // Use retry wrapper with key rotation
     return await keyRotation.withRetry(
         async (apiKey) => {
-            // Extract Group ID from JWT Token (Minimax API Key)
-            let groupId = process.env.MINIMAX_GROUP_ID || extractGroupId(apiKey);
+            // Get GroupID from keyRotation (extracted once from primary key during initialization)
+            let groupId = keyRotation.getMinimaxGroupId();
 
             if (!groupId) {
-                throw new Error("MINIMAX_GROUP_ID is missing and could not be extracted from API Key");
+                throw new Error("MINIMAX_GROUP_ID is missing. Please set MINIMAX_GROUP_ID env variable or ensure primary MINIMAX_API_KEY is a JWT token.");
             }
 
             const url = "https://api.minimax.io/v1/t2a_v2?GroupId=" + groupId;
