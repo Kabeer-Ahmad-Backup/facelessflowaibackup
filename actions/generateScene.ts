@@ -115,6 +115,7 @@ RULES:
 - Keep prompts simple and focused
 - Do NOT include style instructions, camera terms, or negative prompts
 - Describe WHAT is visible in the frame, not HOW it is drawn
+- Never return the same input like i gave you!
 
 Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
 
