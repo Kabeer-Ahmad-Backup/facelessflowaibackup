@@ -254,6 +254,8 @@ export default function Home() {
                                         <option value="stock_vector">Stock + AI (Vector)</option>
                                         <option value="stock_art">Stock + AI (Art)</option>
                                         <option value="clean_illustration">Clean Illustration</option>
+                                        <option value="thick_stick_color">Thick Stick (Colored)</option>
+                                        <option value="thick_stick_bw">Thick Stick (B&W)</option>
                                         <option value="reference_image">Reference Character</option>
                                     </select>
                                 </div>

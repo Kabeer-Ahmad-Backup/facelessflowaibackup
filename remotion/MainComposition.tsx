@@ -43,10 +43,10 @@ export const MainComposition: React.FC<Props> = ({ scenes, settings, isPart, par
                     let durationInSeconds = scene.duration || 5;
 
                     // Add buffer to last scene to ensure audio completes
-                    // This prevents audio cutoff at part boundaries
+                    // Audio files from Minimax may be 1-2s longer than reported duration
                     const isLastScene = index === scenes.length - 1;
                     if (isLastScene) {
-                        durationInSeconds += 0.5; // Add 0.5s buffer for audio completion
+                        durationInSeconds += 2.0; // Add 2.5s buffer for audio completion
                     }
 
                     const durationInFrames = Math.ceil(durationInSeconds * 30);

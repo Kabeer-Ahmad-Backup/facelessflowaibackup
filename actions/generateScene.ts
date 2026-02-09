@@ -208,6 +208,14 @@ No text in image.`;
 
                 subjectDesc = ""; // Handled by reference image and prompt context
                 negativePrompt = "text, watermark, extra limbs, distorted face, noise, grainy";
+            } else if (styleMode === "thick_stick_color") {
+                styleDesc = "Style: simple human stick figure pictogram, head and limbs only, very simplified torso shape, arms and legs as thick solid rounded rods, rounded limb ends, solid filled shapes not outlines, minimal facial features, flat vector illustration, simple color fills, colored clothing blocks (shirt and pants as simple shapes), limited color palette, friendly abstract style, white background, no shading, no texture";
+                subjectDesc = "Subject: Thick stick figure pictograms in simple colors";
+                negativePrompt = "realistic anatomy, detailed body, thin limbs, single line drawing, sketch, ink, pencil, line art, outline only, comic style, cartoon character, childrens illustration, detailed clothing folds, textures text";
+            } else if (styleMode === "thick_stick_bw") {
+                styleDesc = "Style: simple human stick figure pictogram, head and limbs only, no detailed torso, arms and legs as thick solid rods, rounded limb ends, solid filled shapes not lines, minimal facial features or no face, instructional diagram style, ISO safety icon style, flat vector symbol, very minimal detail, no clothing, no anatomy, white background";
+                subjectDesc = "Subject: Black and white thick stick figure symbols";
+                negativePrompt = "cartoon character, childrens illustration, human anatomy, body proportions, clothing, shirt, pants, realistic, sketch, line drawing, outline only, thin lines, comic style text";
             } else { // zen
                 styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, serene lighting.";
                 subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes.";
