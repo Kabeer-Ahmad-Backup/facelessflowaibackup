@@ -172,7 +172,7 @@ Output format: Return ONLY a valid JSON array of strings, containing exactly one
                 negativePrompt = "photorealistic, realism, photograph, painterly, oil painting, concept art, cinematic lighting, dramatic shadows, skin pores, wrinkles, fine detail, emotional expression, facial realism, 3D render, hyperrealistic, grain, noise, text, letters, arrows, labels";
             } else if (styleMode === "cartoon" || styleMode === "stock_vector") {
                 styleDesc = "Style: Vector illustration, instructional vector illustration, thin clean line art, rounded shapes, pastel colors, no shading, simple indoor background.";
-                subjectDesc = "Subject: Friendly, simple vector characters in everyday situations.";
+                subjectDesc = "Subject: Friendly, simple vector old age characters in everyday situations.";
                 negativePrompt = "photo, realistic, 3d, photograph, photorealistic, realism, CGI, render, dramatic lighting, shadows, texture";
             } else if (styleMode === "art" || styleMode === "stock_art") {
                 styleDesc = "Style: 1950s pop art illustration, retro comic illustration, bold black outlines, flat saturated colors, halftone dots, yellow background.";
@@ -180,7 +180,7 @@ Output format: Return ONLY a valid JSON array of strings, containing exactly one
                 negativePrompt = "photo, realistic, 3d, modern, photograph, photorealistic, realism, CGI, render, soft shading, gradients";
             } else if (styleMode === "clean_illustration") {
                 styleDesc = "Style: clean narrative illustration, modern editorial illustration style, realistic human proportions, adult characters only (ages 25–90), mature facial features, soft painted shading with gentle shadows, clean linework (not cartoon), natural adult anatomy, detailed but uncluttered environment, storytelling illustration look.";
-                subjectDesc = "Subject: Adult characters in modern narrative settings.";
+                subjectDesc = "Subject: Adult old age characters in modern narrative settings.";
                 negativePrompt = "child, children, kid, kids, toddler, baby, teen, teenager, cartoon, vector, flat, anime, chibi, 3d, cgi, text";
             } else if (styleMode === "reference_image") {
                 // User-provided strict prompt template
