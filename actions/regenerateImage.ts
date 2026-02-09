@@ -1,7 +1,8 @@
 'use server';
 
+import { SceneApi, ProjectSettings } from '@/types';
 import { createClient } from '@/utils/supabase/server';
-import { generateFalImage, generateRunwareImage, generateGeminiImage } from '@/lib/ai';
+import { generateFalImage, generateRunwareImage, generateGeminiImage, generateReplicateImage } from '@/lib/ai';
 import { generateImagenImage } from '@/lib/imagen';
 import OpenAI from 'openai';
 
@@ -47,12 +48,18 @@ export async function regenerateImage(sceneId: string, text: string, visualStyle
         const promptResponse = await keyRotation.withRetry(
             async (apiKey) => {
                 const openai = getOpenAIClient(apiKey);
+
+                // Use James-specific instructions for james_finetuned style
+                const systemPrompt = activeStyle === 'james_finetuned'
+                    ? 'You are a visual prompt writer creating scenes featuring James (a male character) as the central subject. Generate a detailed visual scene description showing James performing, explaining, or demonstrating the action described. James must be the main subject. Return ONLY a single sentence visual description.'
+                    : 'You are a visual prompt writer. Generate a detailed, visual, descriptive scene prompt based on the given text. Return ONLY a single sentence visual description, no JSON, no explanations.';
+
                 return await openai.chat.completions.create({
                     model: 'gpt-4o-mini',
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are a visual prompt writer. Generate a detailed, visual, descriptive scene prompt based on the given text. Return ONLY a single sentence visual description, no JSON, no explanations.'
+                            content: systemPrompt
                         },
                         {
                             role: 'user',
@@ -126,13 +133,21 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
             styleDesc = "Style: simple human stick figure pictogram, head and limbs only, no detailed torso, arms and legs as thick solid rods, rounded limb ends, solid filled shapes not lines, minimal facial features or no face, instructional diagram style, ISO safety icon style, flat vector symbol, very minimal detail, no clothing, no anatomy, white background";
             subjectDesc = "Subject: Black and white thick stick figure symbols";
             negativePrompt = "cartoon character, childrens illustration, human anatomy, body proportions, clothing, shirt, pants, realistic, sketch, line drawing, outline only, thin lines, comic style text";
+        } else if (styleMode === "james_finetuned") {
+            // James Finetuned uses Replicate with JAMESTOK trigger
+            styleDesc = "Style: a clean flat cartoon character in the style of JAMESTOK";
+            subjectDesc = "";
+            negativePrompt = "";
         } else { // zen
             styleDesc = "Style: Cinematic, photorealistic, 8k, serene lighting.";
             subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes and in meditative or teaching poses, minimalist Asian temple backgrounds.";
             negativePrompt = "text, logos, writing, modern, cluttered";
         }
 
-        const fullPrompt = `${simplePrompt} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
+        // For James Finetuned, append the JAMESTOK trigger
+        const fullPrompt = styleMode === "james_finetuned"
+            ? `${simplePrompt} ${styleDesc}`
+            : `${simplePrompt} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
 
         // 4. Generate image with the same provider logic
         let imageUrl = "";
@@ -154,6 +169,9 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
                 : undefined;
 
             imageUrl = await generateRunwareImage(fullPrompt, projectId, sceneIndex, aspectRatio, modelId, refImageId);
+        } else if (activeModel === 'replicate') {
+            // James Finetuned model
+            imageUrl = await generateReplicateImage(fullPrompt, aspectRatio, projectId, sceneIndex);
         } else {
             imageUrl = await generateFalImage(fullPrompt, projectId, sceneIndex, aspectRatio);
         }

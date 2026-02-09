@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Runware, IRequestImage } from '@runware/sdk-js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import Replicate from 'replicate';
 
 // Initialize Admin Client for Storage Uploads (Bypassing RLS for simpler server-side upload)
 const supabaseAdmin = createClient(
@@ -335,4 +336,65 @@ export async function generateGeminiImage(prompt: string, projectId: string, sce
     }
 
     throw new Error("No image data returned from Gemini 2.5 Flash");
+}
+
+export async function generateReplicateImage(
+    prompt: string,
+    aspectRatio: string = '16:9',
+    projectId: string,
+    sceneIndex: number
+): Promise<string> {
+    const replicate = new Replicate({
+        auth: process.env.REPLICATE_API_TOKEN,
+    });
+
+    console.log(`[Replicate] Generating image with James Finetuned model...`);
+
+    // Map aspect ratios
+    let replicateAspectRatio = '16:9';
+    if (aspectRatio === '9:16') replicateAspectRatio = '9:16';
+    else if (aspectRatio === '1:1') replicateAspectRatio = '1:1';
+
+    const output = await replicate.run(
+        "vivian948/flux-dev-lora:f1085d99b920f1195a80d3197fd9635407cce557ac24e9363e74d9cd0fa17351",
+        {
+            input: {
+                prompt,
+                model: "dev",
+                aspect_ratio: replicateAspectRatio,
+                go_fast: false,
+                lora_scale: 1,
+                megapixels: "1",
+                num_outputs: 1,
+                output_format: "webp",
+                guidance_scale: 3,
+                output_quality: 80,
+                prompt_strength: 0.8,
+                extra_lora_scale: 1,
+                num_inference_steps: 28
+            }
+        }
+    ) as any;
+
+    console.log(`[Replicate] Image generated successfully`);
+
+    // Output is an array of URLs
+    if (output && output.length > 0) {
+        const imageUrl = output[0];
+
+        // Download and upload to Supabase storage
+        const response = await fetch(imageUrl);
+        const buffer = await response.arrayBuffer();
+
+        const uploadedUrl = await uploadToStorage(
+            buffer,
+            projectId,
+            `images/scene_${sceneIndex}_${Date.now()}.webp`,
+            'image/webp'
+        );
+
+        return uploadedUrl;
+    }
+
+    throw new Error("No image returned from Replicate");
 }

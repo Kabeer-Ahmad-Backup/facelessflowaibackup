@@ -239,6 +239,8 @@ export default function Home() {
                                             const updates: any = { visualStyle: newStyle };
                                             if (newStyle === 'reference_image') {
                                                 updates.imageModel = 'runware';
+                                            } else if (newStyle === 'james_finetuned') {
+                                                updates.imageModel = 'replicate';
                                             }
                                             setSettings({ ...settings, ...updates });
                                         }}
@@ -256,6 +258,7 @@ export default function Home() {
                                         <option value="clean_illustration">Clean Illustration</option>
                                         <option value="thick_stick_color">Thick Stick (Colored)</option>
                                         <option value="thick_stick_bw">Thick Stick (B&W)</option>
+                                        <option value="james_finetuned">James Finetuned</option>
                                         <option value="reference_image">Reference Character</option>
                                     </select>
                                 </div>
@@ -301,6 +304,7 @@ export default function Home() {
                                             <option value="runware">Runware (Fast)</option>
                                             <option value="gemini">Google Gemini 2.5</option>
                                             <option value="imagen">Google Imagen 4.0 Fast</option>
+                                            <option value="replicate">Replicate (FLUX LoRA)</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">

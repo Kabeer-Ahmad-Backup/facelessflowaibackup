@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { SceneApi, ProjectSettings } from '@/types';
-import { generateMinimaxAudio, generateFalImage, generateRunwareImage, generateGeminiImage } from '@/lib/ai';
+import { generateMinimaxAudio, generateFalImage, generateRunwareImage, generateGeminiImage, generateReplicateImage } from '@/lib/ai';
 import { generateGenAIProAudio } from '@/lib/genaipro';
 import { generateImagenImage } from '@/lib/imagen';
 import { VOICE_ID_MAP, CHARACTER_REFERENCE_MAP } from '@/lib/constants';
@@ -108,16 +108,33 @@ export async function generateScene(
             
 RULES:
 - Focus on the PRIMARY action happening in the sentence
-- Clearly show who is doing what (with gender), where, and why
+- Clearly show who is doing what, where, and why
 - Describe physical actions, posture, environment, and interactions
 - Use clear, concrete objects, people, and actions
 - Do NOT add ideas, symbolism, or events not stated in the sentence
-- Keep prompts simple and focused
+- Keep prompts focused
 - Do NOT include style instructions, camera terms, or negative prompts
 - Describe WHAT is visible in the frame, not HOW it is drawn
-- Never return the same input like i gave you!
 
 Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
+
+            const baseInstructionsJames = `You are a visual storyteller creating storyboard frames featuring James (a male character) as the central subject. For each sentence below, create ONE image prompt showing James performing, explaining, or demonstrating the action described.
+            
+RULES:
+- James must be the main subject in EVERY scene
+- Focus on the PRIMARY action happening in the sentence
+- Show James doing, telling, explaining, or demonstrating the concept
+- Clearly describe James's actions, posture, environment, and interactions
+- Use clear, concrete objects, people (with James as the focus), and actions
+- Do NOT add ideas, symbolism, or events not stated in the sentence
+- Keep prompts focused on James as the central character
+- Do NOT include style instructions, camera terms, or negative prompts
+- Describe WHAT is visible in the frame, not HOW it is drawn
+
+Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
+
+            // Choose which instructions to use based on visual style
+            const instructions = settings.visualStyle === 'james_finetuned' ? baseInstructionsJames : baseInstructions;
 
             // 4. Generate Simple Scene Description (OpenAI) with retry
             const promptResponse = await keyRotation.withRetry(
@@ -127,7 +144,7 @@ Output format: Return ONLY a valid JSON array of strings, containing exactly one
                         model: "gpt-4o",
                         messages: [{
                             role: "system",
-                            content: baseInstructions
+                            content: instructions
                         }, {
                             role: "user",
                             content: `Sentence: "${text}"`
@@ -217,13 +234,21 @@ No text in image.`;
                 styleDesc = "Style: simple senior human stick figure pictogram, head and limbs only, no detailed torso, arms and legs as thick solid rods, rounded limb ends, solid filled shapes not lines, minimal facial features or no face, instructional diagram style, ISO safety icon style, flat vector symbol, very minimal detail, no clothing, no anatomy, white background";
                 subjectDesc = "Subject: Black and white thick senior stick figure symbols";
                 negativePrompt = "cartoon character, childrens illustration, human anatomy, body proportions, clothing, shirt, pants, realistic, sketch, line drawing, outline only, thin lines, comic style text";
+            } else if (styleMode === "james_finetuned") {
+                // James Finetuned uses Replicate with JAMESTOK trigger
+                styleDesc = "Style: a clean flat cartoon character in the style of JAMESTOK";
+                subjectDesc = "";
+                negativePrompt = "";
             } else { // zen
                 styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, serene lighting.";
                 subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes.";
                 negativePrompt = "text, logos, writing, cluttered";
             }
 
-            const fullPrompt = `${simplePrompt} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
+            // For James Finetuned, append the JAMESTOK trigger
+            const fullPrompt = styleMode === "james_finetuned"
+                ? `${simplePrompt} ${styleDesc}`
+                : `${simplePrompt} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
 
             // 6. Generate Audio (Minimax)
             let targetVoiceId = settings.audioVoice;
@@ -308,6 +333,9 @@ No text in image.`;
                             : undefined;
 
                         imageUrl = await generateRunwareImage(fullPrompt, projectId, sceneIndex, settings.aspectRatio, modelId, refImageId);
+                    } else if (settings.imageModel === 'replicate') {
+                        // James Finetuned model
+                        imageUrl = await generateReplicateImage(fullPrompt, settings.aspectRatio, projectId, sceneIndex);
                     } else {
                         // Default to Fal
                         imageUrl = await generateFalImage(fullPrompt, projectId, sceneIndex, settings.aspectRatio);
