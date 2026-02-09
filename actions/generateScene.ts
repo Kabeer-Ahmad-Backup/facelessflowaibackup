@@ -108,7 +108,7 @@ export async function generateScene(
             
 RULES:
 - Focus on the PRIMARY action happening in the sentence
-- Clearly show who is doing what, where, and why
+- Clearly show who is doing what (with gender), where, and why
 - Describe physical actions, posture, environment, and interactions
 - Use clear, concrete objects, people, and actions
 - Do NOT add ideas, symbolism, or events not stated in the sentence
@@ -172,7 +172,7 @@ Output format: Return ONLY a valid JSON array of strings, containing exactly one
                 negativePrompt = "photorealistic, realism, photograph, painterly, oil painting, concept art, cinematic lighting, dramatic shadows, skin pores, wrinkles, fine detail, emotional expression, facial realism, 3D render, hyperrealistic, grain, noise, text, letters, arrows, labels";
             } else if (styleMode === "cartoon" || styleMode === "stock_vector") {
                 styleDesc = "Style: Vector illustration, instructional vector illustration, thin clean line art, rounded shapes, pastel colors, no shading, simple indoor background.";
-                subjectDesc = "Subject: Friendly, simple vector old age characters in everyday situations.";
+                subjectDesc = "Subject: Friendly, simple vector senior characters in everyday situations.";
                 negativePrompt = "photo, realistic, 3d, photograph, photorealistic, realism, CGI, render, dramatic lighting, shadows, texture";
             } else if (styleMode === "art" || styleMode === "stock_art") {
                 styleDesc = "Style: 1950s pop art illustration, retro comic illustration, bold black outlines, flat saturated colors, halftone dots, yellow background.";
@@ -180,7 +180,7 @@ Output format: Return ONLY a valid JSON array of strings, containing exactly one
                 negativePrompt = "photo, realistic, 3d, modern, photograph, photorealistic, realism, CGI, render, soft shading, gradients";
             } else if (styleMode === "clean_illustration") {
                 styleDesc = "Style: clean narrative illustration, modern editorial illustration style, realistic human proportions, adult characters only (ages 25–90), mature facial features, soft painted shading with gentle shadows, clean linework (not cartoon), natural adult anatomy, detailed but uncluttered environment, storytelling illustration look.";
-                subjectDesc = "Subject: Adult old age characters in modern narrative settings.";
+                subjectDesc = "Subject: Adult senior characters in modern narrative settings.";
                 negativePrompt = "child, children, kid, kids, toddler, baby, teen, teenager, cartoon, vector, flat, anime, chibi, 3d, cgi, text";
             } else if (styleMode === "reference_image") {
                 // User-provided strict prompt template
@@ -209,12 +209,12 @@ No text in image.`;
                 subjectDesc = ""; // Handled by reference image and prompt context
                 negativePrompt = "text, watermark, extra limbs, distorted face, noise, grainy";
             } else if (styleMode === "thick_stick_color") {
-                styleDesc = "Style: simple old age human stick figure pictogram, head and limbs only, very simplified torso shape, arms and legs as thick solid rounded rods, rounded limb ends, solid filled shapes not outlines, minimal facial features, flat vector illustration, simple color fills, colored clothing blocks (shirt and pants as simple shapes), limited color palette, friendly abstract style, white background, no shading, no texture";
-                subjectDesc = "Subject: Thick old age stick figure pictograms in simple colors";
+                styleDesc = "Style: simple senior human stick figure pictogram, head and limbs only, very simplified torso shape, arms and legs as thick solid rounded rods, rounded limb ends, solid filled shapes not outlines, minimal facial features, flat vector illustration, simple color fills, colored clothing blocks (shirt and pants as simple shapes), limited color palette, friendly abstract style, white background, no shading, no texture";
+                subjectDesc = "Subject: Thick senior stick figure pictograms in simple colors";
                 negativePrompt = "realistic anatomy, detailed body, thin limbs, single line drawing, sketch, ink, pencil, line art, outline only, comic style, cartoon character, childrens illustration, detailed clothing folds, textures text";
             } else if (styleMode === "thick_stick_bw") {
-                styleDesc = "Style: simple old age human stick figure pictogram, head and limbs only, no detailed torso, arms and legs as thick solid rods, rounded limb ends, solid filled shapes not lines, minimal facial features or no face, instructional diagram style, ISO safety icon style, flat vector symbol, very minimal detail, no clothing, no anatomy, white background";
-                subjectDesc = "Subject: Black and white thick old agestick figure symbols";
+                styleDesc = "Style: simple senior human stick figure pictogram, head and limbs only, no detailed torso, arms and legs as thick solid rods, rounded limb ends, solid filled shapes not lines, minimal facial features or no face, instructional diagram style, ISO safety icon style, flat vector symbol, very minimal detail, no clothing, no anatomy, white background";
+                subjectDesc = "Subject: Black and white thick senior stick figure symbols";
                 negativePrompt = "cartoon character, childrens illustration, human anatomy, body proportions, clothing, shirt, pants, realistic, sketch, line drawing, outline only, thin lines, comic style text";
             } else { // zen
                 styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, serene lighting.";
