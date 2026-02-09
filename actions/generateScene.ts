@@ -125,8 +125,8 @@ RULES:
 - Focus on the PRIMARY action happening in the sentence
 - Show James doing, telling, explaining, or demonstrating the concept
 - Clearly describe James's actions, posture, environment, and interactions
+- Also mention james facial expressions
 - Use clear, concrete objects, people (with James as the focus), and actions
-- Do NOT add ideas, symbolism, or events not stated in the sentence
 - Keep prompts focused on James as the central character
 - Do NOT include style instructions, camera terms, or negative prompts
 - Describe WHAT is visible in the frame, not HOW it is drawn
