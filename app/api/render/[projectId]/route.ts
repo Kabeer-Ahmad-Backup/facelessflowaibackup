@@ -127,7 +127,7 @@ export async function POST(
                 scenes: scenesToRender,
                 settings: project.settings,
                 projectId,
-                partIndex: currentPartIndex, // Keep partIndex for disclaimer logic
+                isFirstPart: currentPartIndex === 0, // Use different prop name to avoid Remotion's part detection
             },
             codec: 'h264',
             framesPerLambda: dynamicFramesPerLambda,
