@@ -84,7 +84,6 @@ export async function POST(
         // --- LOGIC BRANCHING ---
 
         let scenesToRender = scenes;
-        let isPart = false;
         let currentPartIndex = 0; // 0-based
 
         if (partNumber !== undefined) {
@@ -92,7 +91,6 @@ export async function POST(
             const startIndex = (partNumber - 1) * MAX_SCENES;
             const endIndex = startIndex + MAX_SCENES;
             scenesToRender = scenes.slice(startIndex, endIndex);
-            isPart = true;
             currentPartIndex = partNumber - 1;
 
             console.log(`[Render API] Triggering Manual Part ${partNumber}: Scenes ${startIndex} to ${endIndex} (${scenesToRender.length} scenes)`);
@@ -129,8 +127,7 @@ export async function POST(
                 scenes: scenesToRender,
                 settings: project.settings,
                 projectId,
-                isPart,
-                partIndex: currentPartIndex,
+                partIndex: currentPartIndex, // Keep partIndex for disclaimer logic
             },
             codec: 'h264',
             framesPerLambda: dynamicFramesPerLambda,
@@ -150,7 +147,7 @@ export async function POST(
         console.log(`[Render API] Started Render: ${renderId}`);
 
         // --- DATABASE UPDATE ---
-        if (isPart && partNumber) {
+        if (partNumber !== undefined) {
             // Update specific part in renderParts array
             // We need to fetch latest project settings again to avoid overwriting race conditions?
             // For now, use the one we fetched (low concurrency assumed).

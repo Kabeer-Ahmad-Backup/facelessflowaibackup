@@ -8,18 +8,16 @@ import swooshSound from '../public/swoosh.mp3';
 export const MainCompositionSchema = z.object({
     scenes: z.array(z.any()), // refined type below
     settings: z.any(),
-    isPart: z.boolean().optional(),
     partIndex: z.number().optional(),
 });
 
 type Props = {
     scenes: SceneApi[];
     settings: ProjectSettings;
-    isPart?: boolean;
     partIndex?: number;
 }
 
-export const MainComposition: React.FC<Props> = ({ scenes, settings, isPart, partIndex }) => {
+export const MainComposition: React.FC<Props> = ({ scenes, settings, partIndex }) => {
     if (!scenes || scenes.length === 0) {
         return (
             <AbsoluteFill className="bg-black flex items-center justify-center">
@@ -31,7 +29,7 @@ export const MainComposition: React.FC<Props> = ({ scenes, settings, isPart, par
     return (
         <AbsoluteFill className="bg-black">
             <Series>
-                {settings.disclaimerEnabled && (!isPart || partIndex === 0) && (
+                {settings.disclaimerEnabled && (partIndex === undefined || partIndex === 0) && (
                     <Series.Sequence durationInFrames={45}> {/* 1.5s duration */}
                         <AbsoluteFill className="bg-black flex items-center justify-center">
                             {/* Use staticFile for safe resolution of public assets in Remotion */}
