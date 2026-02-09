@@ -63,7 +63,7 @@ export async function POST(
         // Dynamic MAX_SCENES based on visual style
         // Stock videos are heavier to process, so use lower limit
         const isStockMode = ['stock_natural', 'stock_vector', 'stock_art'].includes(project.settings.visualStyle || '');
-        const MAX_SCENES = isStockMode ? 70 : 200;
+        const MAX_SCENES = isStockMode ? 60 : 200;
 
         console.log(`[Render API] MAX_SCENES set to ${MAX_SCENES} (${isStockMode ? 'Stock Mode' : 'Image Mode'})`);
         const webhookSecret = process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret';
