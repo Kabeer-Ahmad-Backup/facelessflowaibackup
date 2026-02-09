@@ -555,7 +555,7 @@ export default function ProjectPage() {
                     {(() => {
                         // Match backend logic for MAX_SCENES
                         const isStockMode = ['stock_natural', 'stock_vector', 'stock_art'].includes(project.settings.visualStyle || '');
-                        const MAX_SCENES = isStockMode ? 80 : 200;
+                        const MAX_SCENES = isStockMode ? 65 : 200;
                         const totalParts = Math.ceil(scenes.length / MAX_SCENES);
 
                         if (scenes.length > MAX_SCENES) {
