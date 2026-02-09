@@ -7,15 +7,19 @@ import swooshSound from '../public/swoosh.mp3';
 
 export const MainCompositionSchema = z.object({
     scenes: z.array(z.any()), // refined type below
-    settings: z.any()
+    settings: z.any(),
+    isPart: z.boolean().optional(),
+    partIndex: z.number().optional(),
 });
 
 type Props = {
     scenes: SceneApi[];
     settings: ProjectSettings;
+    isPart?: boolean;
+    partIndex?: number;
 }
 
-export const MainComposition: React.FC<Props> = ({ scenes, settings }) => {
+export const MainComposition: React.FC<Props> = ({ scenes, settings, isPart, partIndex }) => {
     if (!scenes || scenes.length === 0) {
         return (
             <AbsoluteFill className="bg-black flex items-center justify-center">
@@ -27,7 +31,7 @@ export const MainComposition: React.FC<Props> = ({ scenes, settings }) => {
     return (
         <AbsoluteFill className="bg-black">
             <Series>
-                {settings.disclaimerEnabled && (
+                {settings.disclaimerEnabled && (!isPart || partIndex === 0) && (
                     <Series.Sequence durationInFrames={45}> {/* 1.5s duration */}
                         <AbsoluteFill className="bg-black flex items-center justify-center">
                             {/* Use staticFile for safe resolution of public assets in Remotion */}
@@ -36,7 +40,15 @@ export const MainComposition: React.FC<Props> = ({ scenes, settings }) => {
                     </Series.Sequence>
                 )}
                 {scenes.map((scene, index) => {
-                    const durationInSeconds = scene.duration || 5;
+                    let durationInSeconds = scene.duration || 5;
+
+                    // Add buffer to last scene to ensure audio completes
+                    // This prevents audio cutoff at part boundaries
+                    const isLastScene = index === scenes.length - 1;
+                    if (isLastScene) {
+                        durationInSeconds += 0.5; // Add 0.5s buffer for audio completion
+                    }
+
                     const durationInFrames = Math.ceil(durationInSeconds * 30);
 
                     // Determine if we should play a transition sound at the END of this scene
