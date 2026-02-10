@@ -344,10 +344,6 @@ export async function generateReplicateImage(
     projectId: string,
     sceneIndex: number
 ): Promise<string> {
-    const replicate = new Replicate({
-        auth: process.env.REPLICATE_API_TOKEN,
-    });
-
     console.log(`[Replicate] Generating image with James Finetuned model...`);
 
     // Map aspect ratios
@@ -355,26 +351,37 @@ export async function generateReplicateImage(
     if (aspectRatio === '9:16') replicateAspectRatio = '9:16';
     else if (aspectRatio === '1:1') replicateAspectRatio = '1:1';
 
-    const output = await replicate.run(
-        "vivian948/newfluxjames:15c760f10c3bf4b4b376b7674bd75279d47401be650cfa9a42a9ab26a40a111f",
-        {
-            input: {
-                prompt,
-                model: "dev",
-                aspect_ratio: replicateAspectRatio,
-                go_fast: false,
-                lora_scale: 1,
-                megapixels: "1",
-                num_outputs: 1,
-                output_format: "webp",
-                guidance_scale: 3,
-                output_quality: 80,
-                prompt_strength: 0.8,
-                extra_lora_scale: 1,
-                num_inference_steps: 28
-            }
-        }
-    ) as any;
+    // Use key rotation for Replicate API
+    const output = await keyRotation.withRetry(
+        async (apiToken) => {
+            const replicate = new Replicate({
+                auth: apiToken,
+            });
+
+            return await replicate.run(
+                "vivian948/newfluxjames:15c760f10c3bf4b4b376b7674bd75279d47401be650cfa9a42a9ab26a40a111f",
+                {
+                    input: {
+                        prompt,
+                        model: "dev",
+                        aspect_ratio: replicateAspectRatio,
+                        go_fast: false,
+                        lora_scale: 1,
+                        megapixels: "1",
+                        num_outputs: 1,
+                        output_format: "webp",
+                        guidance_scale: 3,
+                        output_quality: 80,
+                        prompt_strength: 0.8,
+                        extra_lora_scale: 1,
+                        num_inference_steps: 28
+                    }
+                }
+            ) as any;
+        },
+        () => keyRotation.getNextReplicateKey(),
+        1 // maxRetries
+    );
 
     console.log(`[Replicate] Image generated successfully`);
 

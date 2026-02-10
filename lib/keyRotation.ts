@@ -9,11 +9,13 @@ class KeyRotation {
     private openaiKeys: string[] = [];
     private minimaxKeys: string[] = [];
     private runwareKeys: string[] = [];
+    private replicateKeys: string[] = [];
     private minimaxGroupId: string | null = null; // Store GroupID once
 
     private openaiIndex = 0;
     private minimaxIndex = 0;
     private runwareIndex = 0;
+    private replicateIndex = 0;
 
     private constructor() {
         this.loadKeys();
@@ -58,7 +60,16 @@ class KeyRotation {
             if (key) this.runwareKeys.push(key);
         }
 
-        console.log(`[KeyRotation] Loaded ${this.openaiKeys.length} OpenAI keys, ${this.minimaxKeys.length} Minimax keys, ${this.runwareKeys.length} Runware keys`);
+        // Load Replicate keys
+        const replicatePrimary = process.env.REPLICATE_API_TOKEN;
+        if (replicatePrimary) this.replicateKeys.push(replicatePrimary);
+
+        for (let i = 1; i <= 10; i++) {
+            const key = process.env[`REPLICATE_API_TOKEN${i}`];
+            if (key) this.replicateKeys.push(key);
+        }
+
+        console.log(`[KeyRotation] Loaded ${this.openaiKeys.length} OpenAI keys, ${this.minimaxKeys.length} Minimax keys, ${this.runwareKeys.length} Runware keys, ${this.replicateKeys.length} Replicate keys`);
         if (this.minimaxGroupId) {
             console.log(`[KeyRotation] Minimax GroupID: ${this.minimaxGroupId}`);
         }
@@ -111,6 +122,16 @@ class KeyRotation {
         const key = this.runwareKeys[this.runwareIndex % this.runwareKeys.length];
         console.log(`[KeyRotation] Using Runware key #${(this.runwareIndex % this.runwareKeys.length) + 1}`);
         this.runwareIndex++;
+        return key;
+    }
+
+    public getNextReplicateKey(): string {
+        if (this.replicateKeys.length === 0) {
+            throw new Error('No Replicate API keys available');
+        }
+        const key = this.replicateKeys[this.replicateIndex % this.replicateKeys.length];
+        console.log(`[KeyRotation] Using Replicate key #${(this.replicateIndex % this.replicateKeys.length) + 1}`);
+        this.replicateIndex++;
         return key;
     }
 

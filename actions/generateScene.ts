@@ -130,6 +130,7 @@ RULES:
 - Keep prompts focused on James as the central character
 - Do NOT include style instructions, camera terms, or negative prompts
 - Describe WHAT is visible in the frame, not HOW it is drawn
+- Do not give NSFW content
 
 Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
 
