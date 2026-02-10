@@ -236,7 +236,7 @@ No text in image.`;
                 negativePrompt = "cartoon character, childrens illustration, human anatomy, body proportions, clothing, shirt, pants, realistic, sketch, line drawing, outline only, thin lines, comic style text";
             } else if (styleMode === "james_finetuned") {
                 // James Finetuned uses Replicate with JAMESTOK trigger
-                styleDesc = "Style: a clean flat cartoon character in the style of JAMESTOK";
+                styleDesc = "A clean flat cartoon character of NEWJAMESTOK, white hair, white short beard, adult , he is 30 years old: ";
                 subjectDesc = "";
                 negativePrompt = "";
             } else { // zen
@@ -247,7 +247,7 @@ No text in image.`;
 
             // For James Finetuned, append the JAMESTOK trigger
             const fullPrompt = styleMode === "james_finetuned"
-                ? `${simplePrompt} ${styleDesc}`
+                ? `${styleDesc} ${simplePrompt}`
                 : `${simplePrompt} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
 
             // 6. Generate Audio (Minimax)

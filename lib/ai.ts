@@ -356,7 +356,7 @@ export async function generateReplicateImage(
     else if (aspectRatio === '1:1') replicateAspectRatio = '1:1';
 
     const output = await replicate.run(
-        "vivian948/flux-dev-lora:f1085d99b920f1195a80d3197fd9635407cce557ac24e9363e74d9cd0fa17351",
+        "vivian948/newfluxjames:15c760f10c3bf4b4b376b7674bd75279d47401be650cfa9a42a9ab26a40a111f",
         {
             input: {
                 prompt,
