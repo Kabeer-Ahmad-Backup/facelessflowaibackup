@@ -103,7 +103,7 @@ export async function POST(
         }
 
         // --- OPTIMIZATION & TRIGGER ---
-        const TARGET_CONCURRENCY = 100;
+        const TARGET_CONCURRENCY = 50;
         const totalFrames = scenesToRender.reduce((acc: number, scene: any) => {
             let d = scene.duration || 5;
             if (d > 300) d = d / 1000;
