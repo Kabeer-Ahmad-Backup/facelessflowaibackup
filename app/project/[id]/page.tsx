@@ -8,6 +8,7 @@ import { generateScene } from '@/actions/generateScene';
 import { updateProjectSettings } from '@/actions/updateProjectSettings';
 import { regenerateAudio } from '@/actions/regenerateAudio';
 import { regenerateImage } from '@/actions/regenerateImage';
+import { generateHeadings } from '@/actions/generateHeadings';
 import { Player } from '@remotion/player';
 import { MainComposition } from '@/remotion/MainComposition';
 import { ChevronLeft, Play, LayoutList, Image as ImageIcon, Music, Type, AlertCircle, Sparkles, ChevronDown, Loader2, Wand2, Settings, RefreshCw, Download } from 'lucide-react';
@@ -34,6 +35,7 @@ export default function ProjectPage() {
     const [renderProgress, setRenderProgress] = useState<any>(null);
     const [showRenderModal, setShowRenderModal] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [isValidating, setIsValidating] = useState(false);
     const playerRef = useRef<any>(null);
 
     // Load Project Data
@@ -340,6 +342,21 @@ export default function ProjectPage() {
         const result = await updateProjectSettings(projectId, newSettings);
         if (result.success && result.settings) {
             setProject({ ...project, settings: result.settings });
+
+            // Auto-generate headings if toggled on and not already generated
+            if (newSettings.headingsEnabled === true && (!result.settings.headings || result.settings.headings.length === 0)) {
+                toast.info('Generating headings...');
+                try {
+                    const headingsResult = await generateHeadings(projectId);
+                    toast.success(`Generated ${headingsResult.headings.length} headings`);
+                    // Refresh project to get updated headings
+                    const { data: proj } = await supabase.from('projects').select('*').eq('id', projectId).single();
+                    if (proj) setProject(proj);
+                } catch (e: any) {
+                    console.error('Failed to auto-generate headings:', e);
+                    toast.error(e.message || 'Failed to generate headings');
+                }
+            }
         } else {
             toast.error(`Failed to update settings: ${result.error}`);
         }
@@ -449,7 +466,14 @@ export default function ProjectPage() {
     const handleExportVideo = async (part?: number) => {
         if (!project) return;
 
+        // Prevent duplicate clicks during validation
+        if (isValidating) {
+            toast.warning('Already validating media files, please wait...');
+            return;
+        }
+
         // Validate all scene media before export
+        setIsValidating(true);
         toast.info('Validating media files...');
         const validation = await validateSceneMedia();
 
@@ -966,6 +990,22 @@ export default function ProjectPage() {
 
                         <div className="h-6 w-px bg-white/10"></div>
 
+                        {/* Headings Toggle */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-stone-500 whitespace-nowrap">Headings:</span>
+                            <button
+                                onClick={() => handleUpdateSettings({ headingsEnabled: !project.settings.headingsEnabled })}
+                                className={`w-8 h-4 rounded-full relative transition-colors ${project.settings.headingsEnabled ? 'bg-purple-600' : 'bg-stone-700'}`}
+                            >
+                                <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${project.settings.headingsEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </button>
+                            {project.settings.headings && project.settings.headings.length > 0 && (
+                                <span className="text-[10px] text-purple-400">({project.settings.headings.length})</span>
+                            )}
+                        </div>
+
+                        <div className="h-6 w-px bg-white/10"></div>
+
                         <span className="text-xs font-bold uppercase tracking-wider text-stone-500 whitespace-nowrap">Caption Settings:</span>
 
                         {/* Caption Toggle - Improved Styling */}
@@ -1147,6 +1187,11 @@ export default function ProjectPage() {
                             <option value="crossfade">Crossfade</option>
                             <option value="white_flash">White Flash</option>
                             <option value="camera_flash">Camera Flash</option>
+                            <option value="slide_up">Slide Up</option>
+                            <option value="slide_down">Slide Down</option>
+                            <option value="slide_left">Slide Left</option>
+                            <option value="slide_right">Slide Right</option>
+                            <option value="multi">Multi (Random Mix)</option>
                         </select>
                         <select
                             value={project.settings.transitions.transitionSound || 'none'}

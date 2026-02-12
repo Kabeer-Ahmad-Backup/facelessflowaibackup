@@ -16,6 +16,8 @@ export type ProjectSettings = {
     audioVoice: string;
     disclaimerEnabled: boolean;
     longSentenceBreak: boolean; // Generate 2 images for scenes with 20+ words
+    headingsEnabled: boolean; // Show animated headings for matching scenes
+    headings?: string[]; // Array of heading texts extracted from script
     captions: {
         enabled: boolean;
         position: 'bottom' | 'mid-bottom' | 'center' | 'top';
@@ -34,7 +36,7 @@ export type ProjectSettings = {
     };
     transitions: {
         mode: 'random' | 'specific';
-        type: 'fadein' | 'crossfade' | 'white_flash' | 'camera_flash' | 'none';
+        type: 'fadein' | 'crossfade' | 'white_flash' | 'camera_flash' | 'slide_up' | 'slide_down' | 'slide_left' | 'slide_right' | 'multi' | 'none';
         transitionSound?: 'none' | 'camera_flash' | 'swoosh';
     };
     cameraMovements?: ('zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'pan_up' | 'pan_down' | 'static')[];

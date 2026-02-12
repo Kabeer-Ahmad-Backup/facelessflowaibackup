@@ -25,6 +25,7 @@ export const RemotionRoot: React.FC = () => {
                         audioVoice: 'English_ManWithDeepVoice',
                         disclaimerEnabled: false,
                         longSentenceBreak: true,
+                        headingsEnabled: false,
                         captions: {
                             enabled: true,
                             position: 'bottom',

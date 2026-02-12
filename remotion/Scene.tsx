@@ -1,6 +1,7 @@
 import { AbsoluteFill, Img, Video, useCurrentFrame, useVideoConfig, interpolate, Easing, Audio } from 'remotion';
 import { SceneApi, ProjectSettings } from '../types';
 import { AudioWave } from './AudioWave';
+import { Heading } from './Heading';
 
 type Props = {
     scene: SceneApi;
@@ -11,21 +12,42 @@ export const Scene: React.FC<Props> = ({ scene, settings }) => {
     const frame = useCurrentFrame();
     const { fps, width, height } = useVideoConfig();
 
+    // Find the matched heading text (if any)
+    const matchedHeading = settings.headingsEnabled && settings.headings?.find(heading => {
+        const sceneText = scene.text.toLowerCase().trim();
+        const headingText = heading.toLowerCase().trim();
+
+        // Match if either contains the other, or if they're the same
+        return sceneText.includes(headingText) ||
+            headingText.includes(sceneText) ||
+            sceneText === headingText;
+    });
+
     let d = scene.duration || 5;
     if (d > 300) { d = d / 1000; }
 
     const durationFrames = Math.ceil(d * fps);
 
-    // Transition duration (in frames) - 0.3 seconds
-    const transitionDuration = fps * 0.3;
+    // Transition duration (in frames) - 0.5 seconds for better visibility
+    const transitionDuration = fps * 0.5;
 
     // Calculate transition opacity/effects
     const getTransitionStyle = () => {
         if (frame >= transitionDuration) return {};
 
+        let transitionType = settings.transitions.type;
+
+        // "Multi" logic: Randomly select a transition based on scene index
+        if (transitionType === 'multi') {
+            const types = ['fadein', 'crossfade', 'white_flash', 'camera_flash', 'slide_up', 'slide_down', 'slide_left', 'slide_right'];
+            // Use order_index to deterministically pick a transition so it doesn't jitter on re-renders
+            const index = (scene.order_index || 0) % types.length;
+            transitionType = types[index] as any;
+        }
+
         const progress = frame / transitionDuration;
 
-        switch (settings.transitions.type) {
+        switch (transitionType) {
             case 'fadein':
                 return { opacity: interpolate(frame, [0, transitionDuration], [0, 1]) };
 
@@ -44,6 +66,23 @@ export const Scene: React.FC<Props> = ({ scene, settings }) => {
                 return {
                     filter: `brightness(${cameraBright}) contrast(${interpolate(frame, [0, transitionDuration], [1.5, 1])})`
                 };
+
+            // Slide Transitions
+            case 'slide_left': // Moves in from right to left
+                const slideLeft = interpolate(frame, [0, transitionDuration], [100, 0], { extrapolateRight: 'clamp', easing: Easing.out(Easing.ease) });
+                return { transform: `translateX(${slideLeft}%)` };
+
+            case 'slide_right': // Moves in from left to right
+                const slideRight = interpolate(frame, [0, transitionDuration], [-100, 0], { extrapolateRight: 'clamp', easing: Easing.out(Easing.ease) });
+                return { transform: `translateX(${slideRight}%)` };
+
+            case 'slide_up': // Moves in from bottom to top
+                const slideUp = interpolate(frame, [0, transitionDuration], [100, 0], { extrapolateRight: 'clamp', easing: Easing.out(Easing.ease) });
+                return { transform: `translateY(${slideUp}%)` };
+
+            case 'slide_down': // Moves in from top to bottom
+                const slideDown = interpolate(frame, [0, transitionDuration], [-100, 0], { extrapolateRight: 'clamp', easing: Easing.out(Easing.ease) });
+                return { transform: `translateY(${slideDown}%)` };
 
             case 'none':
             default:
@@ -161,26 +200,30 @@ export const Scene: React.FC<Props> = ({ scene, settings }) => {
                 />
             )}
 
-            {/* Captions */}
-            {settings.captions.enabled && (() => {
-                const captionStyle = settings.captions.style || 'classic';
+            {/* Conditional: Show Heading or Captions */}
+            {matchedHeading ? (
+                <Heading text={matchedHeading} />
+            ) : (
+                settings.captions.enabled && (() => {
+                    const captionStyle = settings.captions.style || 'classic';
 
-                // Import statements are at the top, so we check style here
-                if (captionStyle === 'word_pop') {
-                    const { WordByWordPop } = require('./captions/WordByWordPop');
-                    return <WordByWordPop text={scene.text} durationInSeconds={d} />;
-                } else if (captionStyle === 'karaoke') {
-                    const { KaraokeHighlight } = require('./captions/KaraokeHighlight');
-                    return <KaraokeHighlight text={scene.text} durationInSeconds={d} color={settings.captions.color} />;
-                } else if (captionStyle === 'mrbeast') {
-                    const { MrBeastStyle } = require('./captions/MrBeastStyle');
-                    return <MrBeastStyle text={scene.text} durationInSeconds={d} />;
-                } else {
-                    // Classic caption rendering with 2-line limit
-                    const { ClassicCaptions } = require('./captions/ClassicCaptions');
-                    return <ClassicCaptions text={scene.text} durationInSeconds={d} settings={settings} />;
-                }
-            })()}
+                    // Import statements are at the top, so we check style here
+                    if (captionStyle === 'word_pop') {
+                        const { WordByWordPop } = require('./captions/WordByWordPop');
+                        return <WordByWordPop text={scene.text} durationInSeconds={d} />;
+                    } else if (captionStyle === 'karaoke') {
+                        const { KaraokeHighlight } = require('./captions/KaraokeHighlight');
+                        return <KaraokeHighlight text={scene.text} durationInSeconds={d} color={settings.captions.color} />;
+                    } else if (captionStyle === 'mrbeast') {
+                        const { MrBeastStyle } = require('./captions/MrBeastStyle');
+                        return <MrBeastStyle text={scene.text} durationInSeconds={d} />;
+                    } else {
+                        // Classic caption rendering with 2-line limit
+                        const { ClassicCaptions } = require('./captions/ClassicCaptions');
+                        return <ClassicCaptions text={scene.text} durationInSeconds={d} settings={settings} />;
+                    }
+                })()
+            )}
         </AbsoluteFill>
     );
 };

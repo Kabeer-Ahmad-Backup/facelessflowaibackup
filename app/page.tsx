@@ -63,6 +63,7 @@ export default function Home() {
         audioVoice: 'English_ManWithDeepVoice',
         disclaimerEnabled: true,
         longSentenceBreak: true,
+        headingsEnabled: false,
         captions: {
             enabled: true,
             position: 'bottom',
