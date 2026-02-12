@@ -260,6 +260,7 @@ export default function Home() {
                                         <option value="thick_stick_color">Thick Stick (Colored)</option>
                                         <option value="thick_stick_bw">Thick Stick (B&W)</option>
                                         <option value="james_finetuned">James Finetuned</option>
+                                        <option value="dark_animated">Dark Animated (Psychology)</option>
                                         <option value="reference_image">Reference Character</option>
                                     </select>
                                 </div>

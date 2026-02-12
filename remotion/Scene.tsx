@@ -217,6 +217,9 @@ export const Scene: React.FC<Props> = ({ scene, settings }) => {
                     } else if (captionStyle === 'mrbeast') {
                         const { MrBeastStyle } = require('./captions/MrBeastStyle');
                         return <MrBeastStyle text={scene.text} durationInSeconds={d} />;
+                    } else if (captionStyle === 'dark_psychology') {
+                        const { DarkPsyStyle } = require('./captions/DarkPsyStyle');
+                        return <DarkPsyStyle text={scene.text} durationInSeconds={d} />;
                     } else {
                         // Classic caption rendering with 2-line limit
                         const { ClassicCaptions } = require('./captions/ClassicCaptions');

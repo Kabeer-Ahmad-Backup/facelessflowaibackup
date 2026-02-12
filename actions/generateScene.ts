@@ -240,6 +240,10 @@ No text in image.`;
                 styleDesc = "A clean flat cartoon character of NEWJAMESTOK, white hair, white short beard, adult , he is 30 years old: ";
                 subjectDesc = "";
                 negativePrompt = "";
+            } else if (styleMode === "dark_animated") {
+                styleDesc = "Style: Dark vintage animated background aesthetic, psychological thriller atmosphere, film noir lighting, grainy texture, muted dark colors (deep blacks, grays, dark reds), mysterious shadows, surreal and psychological symbolism, 1950s detective movie feel, high contrast, dramatic lighting.";
+                subjectDesc = "Subject: Shadowy figures, psychological concepts, abstract representations of the mind, vintage manipulation themes.";
+                negativePrompt = "bright, colorful, happy, cartoon, anime, 3d render, modern, glossy, cute, flat, vector, daylight";
             } else { // zen
                 styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, serene lighting.";
                 subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes.";

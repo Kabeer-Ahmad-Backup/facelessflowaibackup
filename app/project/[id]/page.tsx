@@ -972,8 +972,6 @@ export default function ProjectPage() {
                 <div className="flex-1 bg-black/40 flex flex-col">
                     <div className="bg-stone-900/95 border-b border-white/10 p-3 flex flex-wrap items-center gap-x-4 gap-y-3">
                         {/* VISUAL STYLE SETTINGS */}
-                        {/* VISUAL STYLE SETTINGS (Removed - Fixed at creation) */}
-                        {/* <div className="flex items-center gap-2"> ... </div> */}
 
                         <div className="h-6 w-px bg-white/10"></div>
 
@@ -1035,6 +1033,7 @@ export default function ProjectPage() {
                             <option value="word_pop">Word Pop</option>
                             <option value="karaoke">Karaoke</option>
                             <option value="mrbeast">Mr Beast</option>
+                            <option value="dark_psychology">Dark Psychology</option>
                         </select>
 
                         {/* Classic-only settings - only show when classic style is selected */}
