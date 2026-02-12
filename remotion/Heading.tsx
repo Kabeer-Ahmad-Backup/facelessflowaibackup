@@ -60,21 +60,18 @@ export const Heading: React.FC<Props> = ({ text }) => {
                 {/* Main heading text - Black with white border */}
                 <h1
                     style={{
-                        fontSize: '130px',
+                        fontSize: '150px',
+                        fontFamily: 'Montserrat, Impact, sans-serif',
                         fontWeight: 900,
-                        letterSpacing: '0.02em',
+                        letterSpacing: '0.04em',
                         textTransform: 'uppercase',
-                        color: '#000000',
+                        color: 'white',
                         margin: 0,
                         padding: 0,
-                        lineHeight: 1.2,
-                        WebkitTextStroke: '8px white',
+                        lineHeight: 1.1,
+                        WebkitTextStroke: '8px black',
                         paintOrder: 'stroke fill',
-                        textShadow: `
-                            0 0 20px rgba(255, 255, 255, 0.8),
-                            0 0 40px rgba(255, 255, 255, 0.6),
-                            0 10px 30px rgba(0, 0, 0, 0.3)
-                        `,
+                        textShadow: '0 10px 20px rgba(0,0,0,0.5)',
                     }}
                 >
                     {text}

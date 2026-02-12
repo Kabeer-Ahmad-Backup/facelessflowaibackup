@@ -11,7 +11,7 @@ import { regenerateImage } from '@/actions/regenerateImage';
 import { generateHeadings } from '@/actions/generateHeadings';
 import { Player } from '@remotion/player';
 import { MainComposition } from '@/remotion/MainComposition';
-import { ChevronLeft, Play, LayoutList, Image as ImageIcon, Music, Type, AlertCircle, Sparkles, ChevronDown, Loader2, Wand2, Settings, RefreshCw, Download } from 'lucide-react';
+import { ChevronLeft, Play, LayoutList, Image as ImageIcon, Music, Type, AlertCircle, Sparkles, ChevronDown, Loader2, Wand2, Settings, RefreshCw, Download, X } from 'lucide-react';
 import { toast } from 'sonner';
 import RenderingModal from '@/components/RenderingModal';
 
@@ -34,7 +34,8 @@ export default function ProjectPage() {
     const [rendering, setRendering] = useState(false);
     const [renderProgress, setRenderProgress] = useState<any>(null);
     const [showRenderModal, setShowRenderModal] = useState(false);
-    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = useState<{ url: string; url2?: string | null } | null>(null);
+    const [showRegenOptions, setShowRegenOptions] = useState<string | null>(null);
     const [isValidating, setIsValidating] = useState(false);
     const playerRef = useRef<any>(null);
 
@@ -381,11 +382,25 @@ export default function ProjectPage() {
         }
     };
 
-    const handleRegenerateImage = async (sceneId: string, text: string, sceneIndex: number) => {
+
+
+    // ... (rest of code) ...
+
+    const handleRegenerateImage = async (sceneId: string, text: string, sceneIndex: number, imageTarget: 'primary' | 'secondary' = 'primary') => {
         if (!project) return;
         setRegeneratingImage(sceneId);
+        setShowRegenOptions(null); // Close options if open
         try {
-            const result = await regenerateImage(sceneId, text, project.settings.visualStyle, project.settings.imageModel, projectId, sceneIndex, project.settings.aspectRatio);
+            const result = await regenerateImage(
+                sceneId,
+                text,
+                project.settings.visualStyle,
+                project.settings.imageModel,
+                projectId,
+                sceneIndex,
+                project.settings.aspectRatio,
+                imageTarget
+            );
             if (result.success) {
                 // Reload scenes
                 const { data: scns } = await supabase.from('scenes').select('*').eq('project_id', projectId).order('order_index');
@@ -399,6 +414,10 @@ export default function ProjectPage() {
             setRegeneratingImage(null);
         }
     };
+
+    // ... (rendering logic) ...
+
+
 
     // Validate all scene media before export
     const validateSceneMedia = async (): Promise<{ valid: boolean; errors: string[] }> => {
@@ -818,7 +837,7 @@ export default function ProjectPage() {
                                         onClick={(e) => {
                                             if (scene.image_url && scene.media_type !== 'video' && !scene.image_url.includes('.mp4')) {
                                                 e.stopPropagation();
-                                                setPreviewImage(scene.image_url);
+                                                setPreviewImage({ url: scene.image_url, url2: scene.image_url_2 });
                                             }
                                         }}
                                     >
@@ -918,19 +937,54 @@ export default function ProjectPage() {
                                         )}
 
                                         {/* Image Section */}
-                                        <div className="flex items-center justify-between pt-2">
+                                        <div className="flex items-center justify-between pt-2 relative">
                                             <span className="font-semibold text-stone-400">Image:</span>
-                                            <button
-                                                onClick={() => handleRegenerateImage(scene.id, scene.text, scene.order_index)}
-                                                disabled={regeneratingImage === scene.id}
-                                                className="flex items-center gap-1 px-2 py-1 bg-stone-800 hover:bg-stone-700 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                            >
-                                                {regeneratingImage === scene.id ? (
-                                                    <><Loader2 size={10} className="animate-spin" /> Regenerating...</>
-                                                ) : (
-                                                    <><RefreshCw size={10} /> Regenerate</>
-                                                )}
-                                            </button>
+
+                                            {scene.image_url_2 ? (
+                                                <div className="relative">
+                                                    <button
+                                                        onClick={() => setShowRegenOptions(showRegenOptions === scene.id ? null : scene.id)}
+                                                        disabled={regeneratingImage === scene.id}
+                                                        className="flex items-center gap-1 px-2 py-1 bg-stone-800 hover:bg-stone-700 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        {regeneratingImage === scene.id ? (
+                                                            <><Loader2 size={10} className="animate-spin" /> Regenerating...</>
+                                                        ) : (
+                                                            <><RefreshCw size={10} /> Regenerate ({scene.image_url_2 ? '2' : '1'})</>
+                                                        )}
+                                                    </button>
+
+                                                    {/* Dropdown for 2-image scenes */}
+                                                    {showRegenOptions === scene.id && (
+                                                        <div className="absolute top-full right-0 mt-1 w-32 bg-stone-800 border border-stone-700 rounded shadow-xl z-50 overflow-hidden">
+                                                            <button
+                                                                onClick={() => handleRegenerateImage(scene.id, scene.text, scene.order_index, 'primary')}
+                                                                className="w-full text-left px-3 py-2 text-[10px] hover:bg-stone-700 text-stone-200 border-b border-stone-700/50"
+                                                            >
+                                                                Regenerate Image 1
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRegenerateImage(scene.id, scene.text, scene.order_index, 'secondary')}
+                                                                className="w-full text-left px-3 py-2 text-[10px] hover:bg-stone-700 text-stone-200"
+                                                            >
+                                                                Regenerate Image 2
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleRegenerateImage(scene.id, scene.text, scene.order_index)}
+                                                    disabled={regeneratingImage === scene.id}
+                                                    className="flex items-center gap-1 px-2 py-1 bg-stone-800 hover:bg-stone-700 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                >
+                                                    {regeneratingImage === scene.id ? (
+                                                        <><Loader2 size={10} className="animate-spin" /> Regenerating...</>
+                                                    ) : (
+                                                        <><RefreshCw size={10} /> Regenerate</>
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                         {!scene.image_url && (
                                             <div className="flex items-center gap-1 text-red-500 text-[10px]">
@@ -1311,31 +1365,49 @@ export default function ProjectPage() {
             />
 
             {/* Image Preview Modal */}
-            {
-                previewImage && (
-                    <div
-                        className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-                        onClick={() => setPreviewImage(null)}
-                    >
-                        <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
-                            <img
-                                src={previewImage}
-                                alt="Scene preview"
-                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                                onClick={(e) => e.stopPropagation()}
-                            />
-                            <button
-                                onClick={() => setPreviewImage(null)}
-                                className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
-                            >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div className="relative w-full h-full flex flex-col items-center justify-center pointer-events-none">
+                        <button
+                            onClick={() => setPreviewImage(null)}
+                            className="pointer-events-auto absolute top-4 right-4 text-white/50 hover:text-white transition-colors z-50 bg-black/50 p-2 rounded-full"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div className="pointer-events-auto flex gap-4 max-h-[90vh] max-w-full overflow-auto p-4 custom-scrollbar">
+                            {/* Primary Image */}
+                            <div className="relative group flex-shrink-0">
+                                <img
+                                    src={previewImage.url}
+                                    className="max-h-[85vh] w-auto object-contain rounded-lg shadow-2xl border border-white/10"
+                                    alt="Preview 1"
+                                />
+                                {previewImage.url2 && <span className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs font-mono border border-white/10">Image 1</span>}
+                            </div>
+
+                            {/* Secondary Image (if exists) */}
+                            {previewImage.url2 && (
+                                <div className="relative group flex-shrink-0">
+                                    <img
+                                        src={previewImage.url2}
+                                        className="max-h-[85vh] w-auto object-contain rounded-lg shadow-2xl border border-white/10"
+                                        alt="Preview 2"
+                                    />
+                                    <span className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs font-mono border border-white/10">Image 2</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-4 text-stone-400 text-xs text-center pointer-events-auto">
+                            Click anywhere close • {previewImage.url2 ? 'Scroll to view simplified' : ''}
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
         </div >
     );
 }

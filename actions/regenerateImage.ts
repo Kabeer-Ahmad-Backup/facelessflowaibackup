@@ -14,7 +14,16 @@ function getOpenAIClient(apiKey: string) {
     return new OpenAI({ apiKey });
 }
 
-export async function regenerateImage(sceneId: string, text: string, visualStyle: string, imageModel: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9') {
+export async function regenerateImage(
+    sceneId: string,
+    text: string,
+    visualStyle: string,
+    imageModel: string,
+    projectId: string,
+    sceneIndex: number,
+    aspectRatio: string = '16:9',
+    imageTarget: 'primary' | 'secondary' = 'primary'
+) {
     const supabase = await createClient();
 
     // 1. Auth Check
@@ -41,7 +50,7 @@ export async function regenerateImage(sceneId: string, text: string, visualStyle
     const activeModel = imageModel || settings.imageModel;
 
     try {
-        console.log(`Regenerating image for scene ${sceneId} with style: ${activeStyle}`);
+        console.log(`Regenerating image (${imageTarget}) for scene ${sceneId} with style: ${activeStyle}`);
 
         // 3. Generate fresh prompt using OpenAI with retry
         console.log('Generating fresh prompt with OpenAI...');
@@ -181,12 +190,17 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
         }
 
         // 5. Update scene with new image
+        // Conditionally update image_url or image_url_2 based on imageTarget
+        const updateData: any = { prompt: fullPrompt };
+        if (imageTarget === 'secondary') {
+            updateData.image_url_2 = imageUrl;
+        } else {
+            updateData.image_url = imageUrl;
+        }
+
         const { error: updateError } = await supabase
             .from('scenes')
-            .update({
-                image_url: imageUrl,
-                prompt: fullPrompt
-            })
+            .update(updateData)
             .eq('id', sceneId);
 
         if (updateError) throw updateError;
