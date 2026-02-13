@@ -338,8 +338,12 @@ No text in image.`;
                             : undefined;
 
                         imageUrl = await generateRunwareImage(fullPrompt, projectId, sceneIndex, settings.aspectRatio, modelId, refImageId);
+                    } else if (settings.imageModel && settings.imageModel.startsWith('jamestok:')) {
+                        // James Finetuned via Runware
+                        console.log(`Using custom James model: ${settings.imageModel}`);
+                        imageUrl = await generateRunwareImage(fullPrompt, projectId, sceneIndex, settings.aspectRatio, settings.imageModel);
                     } else if (settings.imageModel === 'replicate') {
-                        // James Finetuned model
+                        // James Finetuned model via Replicate (Legacy/Default option)
                         imageUrl = await generateReplicateImage(fullPrompt, settings.aspectRatio, projectId, sceneIndex);
                     } else {
                         // Default to Fal

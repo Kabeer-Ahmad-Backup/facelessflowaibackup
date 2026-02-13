@@ -262,12 +262,44 @@ export async function generateRunwareImage(prompt: string, projectId: string, sc
                 }
             }
 
+            // Determine Model and LoRA configuration
+            let targetModel = modelId || "runware:100@1";
+            let loraConfig: any[] = [];
+
+            if (targetModel.startsWith('jamestok:')) {
+                const isSchnell = targetModel.includes("jamestok:224@4455"); // James Shnell -> Flux Dev (wait, user request says: "if james schnell is selected, use this as base model : runware:100@1")
+                // Let's re-read carefully: "if james schnell is selected, use this as base model : runware:100@1"
+                // "And if james dev is selected, use runware:101@1 this as base model"
+
+                // Wait, "schnell" typically implies Flux Schnell (101). User might have mixed them up or wants cross-pollination.
+                // I will follow user instructions EXACTLY.
+                // James Shnell (224@4455) -> runware:100@1 (Flux Dev base)
+                // James Dev (333@3453) -> runware:101@1 (Flux Schnell base)
+
+                // Actually, let's map it clearly:
+                // 224@4455 (Shnell) -> 100@1 (Dev)
+                // 333@3453 (Dev) -> 101@1 (Schnell)
+
+                let baseModel = "runware:100@1"; // Default to Dev
+                if (targetModel === "jamestok:333@3453") {
+                    baseModel = "runware:101@1"; // Use Schnell for "James Dev"
+                }
+
+                console.log(`[Runware] Detected James LoRA: ${targetModel}. Using Base: ${baseModel}`);
+                loraConfig = [{
+                    model: targetModel,
+                    weight: 1.0
+                }];
+                targetModel = baseModel;
+            }
+
             const results = await runware.imageInference({
                 positivePrompt: prompt,
-                model: modelId || "runware:100@1",
+                model: targetModel,
                 width,
                 height,
                 numberResults: 1,
+                ...(loraConfig.length > 0 ? { lora: loraConfig } : {}),
                 ...(effectiveReferenceImageId ? {
                     referenceImages: [effectiveReferenceImageId]
                 } : {})

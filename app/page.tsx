@@ -302,11 +302,21 @@ export default function Home() {
                                             onChange={(e) => setSettings({ ...settings, imageModel: e.target.value as any })}
                                             className="w-full bg-stone-950 border border-stone-800 rounded-lg p-3 text-sm focus:outline-none focus:border-orange-500/50 transition-colors"
                                         >
-                                            <option value="fal">Fal.ai (Flux Pro)</option>
-                                            <option value="runware">Runware (Fast)</option>
-                                            <option value="gemini">Google Gemini 2.5</option>
-                                            <option value="imagen">Google Imagen 4.0 Fast</option>
-                                            <option value="replicate">Replicate (FLUX LoRA)</option>
+                                            {settings.visualStyle === 'james_finetuned' ? (
+                                                <>
+                                                    <option value="replicate">Replicate (James)</option>
+                                                    <option value="jamestok:224@4455">James Shnell</option>
+                                                    <option value="jamestok:333@3453">James Dev</option>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <option value="fal">Fal.ai (Flux Pro)</option>
+                                                    <option value="runware">Runware (Fast)</option>
+                                                    <option value="gemini">Google Gemini 2.5</option>
+                                                    <option value="imagen">Google Imagen 4.0 Fast</option>
+                                                    {/* <option value="replicate">Replicate (FLUX LoRA)</option> */}
+                                                </>
+                                            )}
                                         </select>
                                     </div>
                                     <div className="space-y-2">

@@ -182,8 +182,12 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
                 : undefined;
 
             imageUrl = await generateRunwareImage(fullPrompt, projectId, sceneIndex, aspectRatio, modelId, refImageId);
+        } else if (activeModel && activeModel.startsWith('jamestok:')) {
+            // James Finetuned via Runware (Regeneration)
+            console.log(`Regenerating with custom James model: ${activeModel}`);
+            imageUrl = await generateRunwareImage(fullPrompt, projectId, sceneIndex, aspectRatio, activeModel);
         } else if (activeModel === 'replicate') {
-            // James Finetuned model
+            // James Finetuned model via Replicate
             imageUrl = await generateReplicateImage(fullPrompt, aspectRatio, projectId, sceneIndex);
         } else {
             imageUrl = await generateFalImage(fullPrompt, projectId, sceneIndex, aspectRatio);
