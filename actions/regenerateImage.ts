@@ -195,7 +195,12 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
 
         // 5. Update scene with new image
         // Conditionally update image_url or image_url_2 based on imageTarget
-        const updateData: any = { prompt: fullPrompt };
+        // Also ensure media_type is set to 'image' (important if converting from 'video')
+        const updateData: any = {
+            prompt: fullPrompt,
+            media_type: 'image'
+        };
+
         if (imageTarget === 'secondary') {
             updateData.image_url_2 = imageUrl;
         } else {

@@ -494,7 +494,13 @@ export default function ProjectPage() {
         // Validate all scene media before export
         setIsValidating(true);
         toast.info('Validating media files...');
-        const validation = await validateSceneMedia();
+
+        let validation;
+        try {
+            validation = await validateSceneMedia();
+        } finally {
+            setIsValidating(false);
+        }
 
         if (!validation.valid) {
             console.error('Media validation failed:', validation.errors);
