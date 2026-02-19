@@ -134,8 +134,29 @@ RULES:
 
 Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
 
+            const baseInstructionsGrandma = `You are a visual storyteller creating storyboard frames featuring Grandma (a female character) as the central subject. For each sentence below, create ONE image prompt showing Grandma performing, explaining, or demonstrating the action described.
+            
+RULES:
+- Grandma must be the main subject in EVERY scene
+- Focus on the PRIMARY action happening in the sentence
+- Show Grandma doing, telling, explaining, or demonstrating the concept
+- Clearly describe Grandma's actions, posture, environment, and interactions
+- Also mention Grandma's facial expressions
+- Use clear, concrete objects, people (with Grandma as the focus), and actions
+- Keep prompts focused on Grandma as the central character
+- Do NOT include style instructions, camera terms, or negative prompts
+- Describe WHAT is visible in the frame, not HOW it is drawn
+- Do not give NSFW content
+
+Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
+
             // Choose which instructions to use based on visual style
-            const instructions = settings.visualStyle === 'james_finetuned' ? baseInstructionsJames : baseInstructions;
+            let instructions = baseInstructions;
+            if (settings.visualStyle === 'james_finetuned') {
+                instructions = baseInstructionsJames;
+            } else if (settings.visualStyle === 'grandma_finetuned') {
+                instructions = baseInstructionsGrandma;
+            }
 
             // 4. Generate Simple Scene Description (OpenAI) with retry
             const promptResponse = await keyRotation.withRetry(
@@ -240,6 +261,11 @@ No text in image.`;
                 styleDesc = "A clean flat cartoon character of NEWJAMESTOK, white hair, white short beard, adult , he is 30 years old: ";
                 subjectDesc = "";
                 negativePrompt = "";
+            } else if (styleMode === "grandma_finetuned") {
+                // Grandma Finetuned uses Runware with GRANDMATOK trigger
+                styleDesc = "A clean flat cartoon character of GRANDMATOK, adult , she is 30 years old: ";
+                subjectDesc = "";
+                negativePrompt = "";
             } else if (styleMode === "dark_animated") {
                 styleDesc = "Style: Dark vintage animated background aesthetic, psychological thriller atmosphere, film noir lighting, grainy texture, muted dark colors (deep blacks, grays, dark reds), mysterious shadows, surreal and psychological symbolism, 1950s detective movie feel, high contrast, dramatic lighting.";
                 subjectDesc = "Subject: Shadowy figures, psychological concepts, abstract representations of the mind, vintage manipulation themes.";
@@ -250,8 +276,8 @@ No text in image.`;
                 negativePrompt = "text, logos, writing, cluttered";
             }
 
-            // For James Finetuned, append the JAMESTOK trigger
-            const fullPrompt = styleMode === "james_finetuned"
+            // For James/Grandma Finetuned, append the trigger without extra style descriptions
+            const fullPrompt = (styleMode === "james_finetuned" || styleMode === "grandma_finetuned")
                 ? `${styleDesc} ${simplePrompt}`
                 : `${simplePrompt} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
 

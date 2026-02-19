@@ -267,27 +267,32 @@ export async function generateRunwareImage(prompt: string, projectId: string, sc
             let loraConfig: any[] = [];
 
             if (targetModel.startsWith('jamestok:')) {
-                const isSchnell = targetModel.includes("jamestok:224@4455"); // James Shnell -> Flux Dev (wait, user request says: "if james schnell is selected, use this as base model : runware:100@1")
-                // Let's re-read carefully: "if james schnell is selected, use this as base model : runware:100@1"
-                // "And if james dev is selected, use runware:101@1 this as base model"
-
-                // Wait, "schnell" typically implies Flux Schnell (101). User might have mixed them up or wants cross-pollination.
-                // I will follow user instructions EXACTLY.
-                // James Shnell (224@4455) -> runware:100@1 (Flux Dev base)
-                // James Dev (333@3453) -> runware:101@1 (Flux Schnell base)
-
-                // Actually, let's map it clearly:
-                // 224@4455 (Shnell) -> 100@1 (Dev)
-                // 333@3453 (Dev) -> 101@1 (Schnell)
-
                 let baseModel = "runware:100@1"; // Default to Dev
-                if (targetModel === "jamestok:333@3453") {
-                    baseModel = "runware:101@1"; // Use Schnell for "James Dev"
+                let loraId = targetModel;
+
+                // Grandma Finetuned Logic
+                if (targetModel.includes('235@6656')) {
+                    // This LoRA is Flux Dev (flux1d), so it MUST use runware:100@1.
+                    // Even if user requested #schnell, we fallback to Dev base to prevent crash.
+                    // We strip the suffix but keep using Dev base.
+                    if (targetModel.includes('#schnell')) {
+                        loraId = targetModel.replace('#schnell', '');
+                    }
+                    baseModel = "runware:101@1"; // Always Flux Dev for this LoRA
+                    console.warn("Forcing Flux Dev base for Grandma LoRA (incompatible with Schnell)");
+                }
+                // James Finetuned Logic (Existing)
+                else {
+                    // 224@4455 (Shnell) -> 100@1 (Dev)
+                    // 333@3453 (Dev) -> 101@1 (Schnell)
+                    if (targetModel === "jamestok:333@3453") {
+                        baseModel = "runware:101@1";
+                    }
                 }
 
-                console.log(`[Runware] Detected James LoRA: ${targetModel}. Using Base: ${baseModel}`);
+                console.log(`[Runware] Detected Custom LoRA: ${loraId}. Using Base: ${baseModel}`);
                 loraConfig = [{
-                    model: targetModel,
+                    model: loraId,
                     weight: 1.0
                 }];
                 targetModel = baseModel;

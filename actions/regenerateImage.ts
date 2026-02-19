@@ -61,7 +61,9 @@ export async function regenerateImage(
                 // Use James-specific instructions for james_finetuned style
                 const systemPrompt = activeStyle === 'james_finetuned'
                     ? 'You are a visual prompt writer creating scenes featuring James (a male character) as the central subject. Generate a detailed visual scene description showing James performing, explaining, or demonstrating the action described. James must be the main subject. Return ONLY a single sentence visual description.'
-                    : 'You are a visual prompt writer. Generate a detailed, visual, descriptive scene prompt based on the given text. Return ONLY a single sentence visual description, no JSON, no explanations.';
+                    : activeStyle === 'grandma_finetuned'
+                        ? 'You are a visual prompt writer creating scenes featuring Grandma (a female character) as the central subject. Generate a detailed visual scene description showing Grandma performing, explaining, or demonstrating the action described. Grandma must be the main subject. Return ONLY a single sentence visual description.'
+                        : 'You are a visual prompt writer. Generate a detailed, visual, descriptive scene prompt based on the given text. Return ONLY a single sentence visual description, no JSON, no explanations.';
 
                 return await openai.chat.completions.create({
                     model: 'gpt-4o-mini',
@@ -147,6 +149,10 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
             styleDesc = "A clean flat cartoon character of NEWJAMESTOK, white hair, white short beard, adult , he is 30 years old: ";
             subjectDesc = "";
             negativePrompt = "";
+        } else if (styleMode === "grandma_finetuned") {
+            styleDesc = "A clean flat cartoon character of GRANDMATOK, adult , she is 30 years old: ";
+            subjectDesc = "";
+            negativePrompt = "";
         } else if (styleMode === "dark_animated") {
             styleDesc = "Style: Dark vintage animated background aesthetic, psychological thriller atmosphere, film noir lighting, grainy texture, muted dark colors (deep blacks, grays, dark reds), mysterious shadows, surreal and psychological symbolism, 1950s detective movie feel, high contrast, dramatic lighting.";
             subjectDesc = "Subject: Shadowy figures, psychological concepts, abstract representations of the mind, vintage manipulation themes.";
@@ -157,8 +163,8 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
             negativePrompt = "text, logos, writing, modern, cluttered";
         }
 
-        // For James Finetuned, append the JAMESTOK trigger
-        const fullPrompt = styleMode === "james_finetuned"
+        // For James/Grandma Finetuned, append the trigger
+        const fullPrompt = (styleMode === "james_finetuned" || styleMode === "grandma_finetuned")
             ? `${styleDesc} ${simplePrompt}`
             : `${simplePrompt} ${styleDesc} ${subjectDesc} NO TEXT IN THE IMAGE. Negative: ${negativePrompt}`;
 

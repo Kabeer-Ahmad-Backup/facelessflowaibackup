@@ -242,6 +242,8 @@ export default function Home() {
                                                 updates.imageModel = 'runware';
                                             } else if (newStyle === 'james_finetuned') {
                                                 updates.imageModel = 'replicate';
+                                            } else if (newStyle === 'grandma_finetuned') {
+                                                updates.imageModel = 'jamestok:235@6656';
                                             }
                                             setSettings({ ...settings, ...updates });
                                         }}
@@ -260,6 +262,7 @@ export default function Home() {
                                         <option value="thick_stick_color">Thick Stick (Colored)</option>
                                         <option value="thick_stick_bw">Thick Stick (B&W)</option>
                                         <option value="james_finetuned">James Finetuned</option>
+                                        <option value="grandma_finetuned">Grandma Finetuned</option>
                                         <option value="dark_animated">Dark Animated (Psychology)</option>
                                         <option value="reference_image">Reference Character</option>
                                     </select>
@@ -307,6 +310,11 @@ export default function Home() {
                                                     <option value="replicate">Replicate (James)</option>
                                                     <option value="jamestok:224@4455">James Shnell</option>
                                                     <option value="jamestok:333@3453">James Dev</option>
+                                                </>
+                                            ) : settings.visualStyle === 'grandma_finetuned' ? (
+                                                <>
+                                                    <option value="jamestok:235@6656">Grandma Shnell</option>
+                                                    <option value="jamestok:235@6656#schnell">Grandma Dev</option>
                                                 </>
                                             ) : (
                                                 <>
