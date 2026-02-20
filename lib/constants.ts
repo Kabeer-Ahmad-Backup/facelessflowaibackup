@@ -25,7 +25,13 @@ export const VOICE_OPTIONS = [
     { label: "Regan (Middle Age W)", value: "genaipro_CRugt7r6KLDJbifthghJ", id: "genaipro_CRugt7r6KLDJbifthghJ" },
     { label: "Jim (Young M)", value: "genaipro_JjqNMa6BEYmyQYRCdHCa", id: "genaipro_JjqNMa6BEYmyQYRCdHCa" },
     { label: "David Boles (Old M)", value: "genaipro_y1adqrqs4jNaANXsIZnD", id: "genaipro_y1adqrqs4jNaANXsIZnD" },
-    { label: "Tiffany (Middle Age W)", value: "genaipro_x9leqCOAXOcmC5jtkq65", id: "genaipro_x9leqCOAXOcmC5jtkq65" }
+    { label: "Tiffany (Middle Age W)", value: "genaipro_x9leqCOAXOcmC5jtkq65", id: "genaipro_x9leqCOAXOcmC5jtkq65" },
+
+    // Qwen Self-Hosted Voices
+    { label: "Grandma (Qwen)", value: "qwen_grandma", id: "qwen_grandma" },
+    { label: "Grandpa (Qwen)", value: "qwen_grandpa", id: "qwen_grandpa" },
+    { label: "Barbara (Qwen)", value: "qwen_barbara", id: "qwen_barbara" },
+    { label: "James (Qwen)", value: "qwen_james", id: "qwen_james" }
 ];
 
 export const CAPTION_POSITIONS = [

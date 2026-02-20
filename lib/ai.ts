@@ -2,6 +2,23 @@ import { createClient } from '@supabase/supabase-js';
 import { Runware, IRequestImage } from '@runware/sdk-js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Replicate from 'replicate';
+import { Client } from "@gradio/client";
+import fs from 'fs';
+import path from 'path';
+
+// Patch global fetch to prevent Next.js 14 from trying to cache Gradio SSE streams,
+// which causes a massive "Failed to set fetch cache Request... AbortError" spam when the stream finishes.
+const originalFetch = globalThis.fetch;
+if (!(originalFetch as any).__patched) {
+    globalThis.fetch = async function (url: any, init?: RequestInit) {
+        const urlString = typeof url === 'string' ? url : url?.url;
+        if (typeof urlString === 'string' && urlString.includes('gradio_api')) {
+            return originalFetch(url, { ...init, cache: 'no-store' } as any);
+        }
+        return originalFetch(url, init);
+    };
+    (globalThis.fetch as any).__patched = true;
+}
 
 // Initialize Admin Client for Storage Uploads (Bypassing RLS for simpler server-side upload)
 const supabaseAdmin = createClient(
@@ -123,6 +140,85 @@ export async function generateMinimaxAudio(text: string, voiceId: string = "male
         },
         () => keyRotation.getNextMinimaxKey()
     );
+}
+
+export async function generateQwenAudio(text: string, voiceId: string, projectId: string, sceneIndex: number): Promise<{ url: string, duration: number }> {
+    console.log(`[Qwen TTS] Generating audio for voice: ${voiceId}`);
+
+    // Map voiceId to file
+    const voiceFileMap: Record<string, string> = {
+        'qwen_grandma': 'grandma_voice_clone_prompt_s68u9kzy.pt',
+        'qwen_grandpa': 'grandpa_voice_clone_prompt_xqvbtw0n.pt',
+        'qwen_barbara': 'barbara_voice_clone_prompt_poi3bk3z.pt',
+        'qwen_james': 'james_voice_clone_prompt_9us41qyq.pt'
+    };
+
+    const fileName = voiceFileMap[voiceId];
+    if (!fileName) {
+        throw new Error(`Invalid Qwen voice ID: ${voiceId}`);
+    }
+
+    // Read the local file as a File object so the backend recognizes the .pt extension
+    const filePath = path.join(process.cwd(), 'public', 'qwen files', fileName);
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`Voice file not found: ${filePath}`);
+    }
+
+    const fileBuffer = fs.readFileSync(filePath);
+    let exampleFile: Blob | typeof globalThis.File;
+    try {
+        exampleFile = new File([fileBuffer], fileName, { type: 'application/octet-stream' });
+    } catch {
+        // Fallback if File is not supported natively in this Node environment
+        exampleFile = new Blob([fileBuffer], { type: 'application/octet-stream' });
+        (exampleFile as any).name = fileName;
+    }
+
+    try {
+        const client = await Client.connect("https://stylique-qwen-tts-docker.hf.space/");
+        const result = await client.predict("/load_prompt_and_gen", {
+            file_obj: exampleFile,
+            text: text,
+            lang_disp: "Auto",
+        });
+
+        // result.data should be [ { url: string, orig_name: string... }, "Success message" ]
+        // Wait, the docs say: "[0]: The output value that appears in the 'Output Audio' Audio component."
+        // Usually Gradio returns an object with a `url` for audio/files.
+        const audioData = (result.data as any[])[0];
+        if (!audioData || !audioData.url) {
+            console.error("[Qwen TTS] Invalid response", result.data);
+            throw new Error("Invalid response from Qwen TTS");
+        }
+
+        const audioUrl = audioData.url;
+
+        // Fetch the generated audio file
+        const audioResp = await fetch(audioUrl);
+        if (!audioResp.ok) {
+            throw new Error(`Failed to fetch generated audio: ${audioResp.status}`);
+        }
+
+        const arrayBuffer = await audioResp.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        // Parse Duration
+        const metadata = await parseBuffer(buffer, 'audio/wav'); // Qwen usually outputs wav or mp3, parseBuffer attempts auto-detect usually but specifying helps. Actually, parseBuffer detects by content. We'll use 'audio/wav' as fallback hint or assume it auto-detects.
+        const duration = metadata.format.duration || 5;
+
+        // Upload to Supabase
+        const publicUrl = await uploadToStorage(
+            buffer,
+            projectId,
+            `audio/qwen_${sceneIndex}_${Date.now()}.wav`,
+            'audio/wav'
+        );
+
+        return { url: publicUrl, duration };
+    } catch (e: any) {
+        console.error("[Qwen TTS] Error:", e);
+        throw new Error(`Qwen TTS Failed: ${e.message}`);
+    }
 }
 
 export async function generateFalImage(prompt: string, projectId: string, sceneIndex: number, aspectRatio: string = '16:9'): Promise<string> {

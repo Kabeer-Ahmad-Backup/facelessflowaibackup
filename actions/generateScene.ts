@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { SceneApi, ProjectSettings } from '@/types';
-import { generateMinimaxAudio, generateFalImage, generateRunwareImage, generateGeminiImage, generateReplicateImage } from '@/lib/ai';
+import { generateMinimaxAudio, generateFalImage, generateRunwareImage, generateGeminiImage, generateReplicateImage, generateQwenAudio } from '@/lib/ai';
 import { generateGenAIProAudio } from '@/lib/genaipro';
 import { generateImagenImage } from '@/lib/imagen';
 import { VOICE_ID_MAP, CHARACTER_REFERENCE_MAP } from '@/lib/constants';
@@ -70,7 +70,7 @@ export async function generateScene(
 
         if (existingScenes && existingScenes.length > 0) {
             // Update existing scene
-            console.log(`Updating existing scene at index ${sceneIndex}`);
+            console.log(`Updating existing scene at index ${sceneIndex} `);
             const { data: updatedScene, error: updateError } = await supabase
                 .from('scenes')
                 .update({
@@ -104,8 +104,8 @@ export async function generateScene(
         try {
 
             // 4. Generate Simple Scene Description (OpenAI)
-            const baseInstructions = `You are a visual storyteller creating storyboard frames. For each sentence below, keeping context of the previous sentences in mind, create ONE image prompt that visually represents the exact moment described. 
-            
+            const baseInstructions = `You are a visual storyteller creating storyboard frames. For each sentence below, keeping context of the previous sentences in mind, create ONE image prompt that visually represents the exact moment described.
+
 RULES:
 - Focus on the PRIMARY action happening in the sentence
 - Clearly show who is doing what, where, and why
@@ -119,13 +119,13 @@ RULES:
 Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
 
             const baseInstructionsJames = `You are a visual storyteller creating storyboard frames featuring James (a male character) as the central subject. For each sentence below, create ONE image prompt showing James performing, explaining, or demonstrating the action described.
-            
+
 RULES:
 - James must be the main subject in EVERY scene
 - Focus on the PRIMARY action happening in the sentence
 - Show James doing, telling, explaining, or demonstrating the concept
 - Clearly describe James's actions, posture, environment, and interactions
-- Also mention james facial expressions
+- Also mention James's facial expressions
 - Use clear, concrete objects, people (with James as the focus), and actions
 - Keep prompts focused on James as the central character
 - Do NOT include style instructions, camera terms, or negative prompts
@@ -135,7 +135,7 @@ RULES:
 Output format: Return ONLY a valid JSON array of strings, containing exactly one string for the one sentence provided.`;
 
             const baseInstructionsGrandma = `You are a visual storyteller creating storyboard frames featuring Grandma (a female character) as the central subject. For each sentence below, create ONE image prompt showing Grandma performing, explaining, or demonstrating the action described.
-            
+
 RULES:
 - Grandma must be the main subject in EVERY scene
 - Focus on the PRIMARY action happening in the sentence
@@ -271,8 +271,8 @@ No text in image.`;
                 subjectDesc = "Subject: Shadowy figures, psychological concepts, abstract representations of the mind, vintage manipulation themes.";
                 negativePrompt = "bright, colorful, happy, cartoon, anime, 3d render, modern, glossy, cute, flat, vector, daylight";
             } else { // zen
-                styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, serene lighting.";
-                subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes.";
+                styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, natural lighting.";
+                subjectDesc = "Subject: Zen Buddhist monk in orange robes/clothes, performing, explaining or doing work in normal life.";
                 negativePrompt = "text, logos, writing, cluttered";
             }
 
@@ -296,6 +296,11 @@ No text in image.`;
                     const actualVoiceId = targetVoiceId.replace('genaipro_', '');
                     console.log(`Using GenAIPro provider with voice: ${actualVoiceId}`);
                     const audioResult = await generateGenAIProAudio(text, actualVoiceId, projectId, sceneIndex);
+                    audioUrl = audioResult.url;
+                    audioDuration = audioResult.duration;
+                } else if (targetVoiceId.startsWith('qwen_')) {
+                    console.log(`Using Qwen TTS provider with voice: ${targetVoiceId}`);
+                    const audioResult = await generateQwenAudio(text, targetVoiceId, projectId, sceneIndex);
                     audioUrl = audioResult.url;
                     audioDuration = audioResult.duration;
                 } else {
