@@ -158,13 +158,23 @@ export async function generateQwenAudio(text: string, voiceId: string, projectId
         throw new Error(`Invalid Qwen voice ID: ${voiceId}`);
     }
 
-    // Read the local file as a File object so the backend recognizes the .pt extension
-    const filePath = path.join(process.cwd(), 'public', 'qwen files', fileName);
-    if (!fs.existsSync(filePath)) {
-        throw new Error(`Voice file not found: ${filePath}`);
+    // Fetch the file over HTTP so it works correctly on Vercel
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+        (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ||
+        'http://localhost:3000';
+
+    // Qwen files are located in public/qwen files/
+    const fileUrl = `${baseUrl}/qwen%20files/${fileName}`;
+    console.log(`[Qwen TTS] Fetching voice file from: ${fileUrl}`);
+
+    const fileResp = await fetch(fileUrl);
+    if (!fileResp.ok) {
+        throw new Error(`Voice file not found at ${fileUrl}: ${fileResp.status}`);
     }
 
-    const fileBuffer = fs.readFileSync(filePath);
+    const arrayBuffer = await fileResp.arrayBuffer();
+    const fileBuffer = Buffer.from(arrayBuffer);
+
     let exampleFile: Blob | typeof globalThis.File;
     try {
         exampleFile = new File([fileBuffer], fileName, { type: 'application/octet-stream' });
