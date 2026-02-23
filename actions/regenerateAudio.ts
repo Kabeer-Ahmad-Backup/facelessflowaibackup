@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
-import { generateMinimaxAudio } from '@/lib/ai';
+import { generateMinimaxAudio, generateQwenAudio } from '@/lib/ai';
 import { generateGenAIProAudio } from '@/lib/genaipro';
 
 export async function regenerateAudio(sceneId: string, text: string, voiceId: string, projectId: string, sceneIndex: number) {
@@ -33,6 +33,10 @@ export async function regenerateAudio(sceneId: string, text: string, voiceId: st
         if (voiceId.startsWith('genaipro_')) {
             const actualVoiceId = voiceId.replace('genaipro_', '');
             const result = await generateGenAIProAudio(text, actualVoiceId, projectId, sceneIndex);
+            audioUrl = result.url;
+            audioDuration = result.duration;
+        } else if (voiceId.startsWith('qwen_')) {
+            const result = await generateQwenAudio(text, voiceId, projectId, sceneIndex);
             audioUrl = result.url;
             audioDuration = result.duration;
         } else {

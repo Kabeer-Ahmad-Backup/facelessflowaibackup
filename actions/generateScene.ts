@@ -200,8 +200,8 @@ Output format: Return ONLY a valid JSON array of strings, containing exactly one
 
             if (styleMode === "normal" || styleMode === "stock_natural") {
                 styleDesc = "Style: Cinematic, photorealistic, 8k, high-quality, beautiful, everyday life, humanistic, natural lighting.";
-                subjectDesc = "Subject: Modern everyday life or general cinematic visuals.";
-                negativePrompt = "text, logos, writing, letters, words, watermarks";
+                subjectDesc = "Subject: Modern everyday life or general cinematic visuals and senior person.";
+                negativePrompt = "text, logos, writing, letters, words, watermarks, young person";
             } else if (styleMode === "stick") {
                 styleDesc = "Style: Minimalist stick figure drawing, hand-drawn sketch style, black ink on white paper, simple lines.";
                 subjectDesc = "Subject: Simple stick figures, very abstract and funny/cute.";
