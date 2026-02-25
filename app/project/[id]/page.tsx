@@ -34,7 +34,7 @@ export default function ProjectPage() {
     const [rendering, setRendering] = useState(false);
     const [renderProgress, setRenderProgress] = useState<any>(null);
     const [showRenderModal, setShowRenderModal] = useState(false);
-    const [previewImage, setPreviewImage] = useState<{ url: string; url2?: string | null } | null>(null);
+    const [previewImage, setPreviewImage] = useState<{ url: string; url2?: string | null; isVideo?: boolean } | null>(null);
     const [showRegenOptions, setShowRegenOptions] = useState<string | null>(null);
     const [isValidating, setIsValidating] = useState(false);
     const playerRef = useRef<any>(null);
@@ -604,7 +604,7 @@ export default function ProjectPage() {
                     {(() => {
                         // Match backend logic for MAX_SCENES
                         const isStockMode = ['stock_natural', 'stock_vector', 'stock_art'].includes(project.settings.visualStyle || '');
-                        const MAX_SCENES = isStockMode ? 60 : 200;
+                        const MAX_SCENES = isStockMode ? 50 : 200;
                         const totalParts = Math.ceil(scenes.length / MAX_SCENES);
 
                         if (scenes.length > MAX_SCENES) {
@@ -841,9 +841,10 @@ export default function ProjectPage() {
                                     <div
                                         className="w-16 h-16 bg-black rounded-md overflow-hidden flex-shrink-0 relative border border-white/5 hover:ring-2 hover:ring-orange-500/50 transition-all"
                                         onClick={(e) => {
-                                            if (scene.image_url && scene.media_type !== 'video' && !scene.image_url.includes('.mp4')) {
+                                            if (scene.image_url) {
                                                 e.stopPropagation();
-                                                setPreviewImage({ url: scene.image_url, url2: scene.image_url_2 });
+                                                const isVideo = scene.media_type === 'video' || scene.image_url.includes('.mp4');
+                                                setPreviewImage({ url: scene.image_url, url2: scene.image_url_2, isVideo });
                                             }
                                         }}
                                     >
@@ -1385,13 +1386,24 @@ export default function ProjectPage() {
                         </button>
 
                         <div className="pointer-events-auto flex gap-4 max-h-[90vh] max-w-full overflow-auto p-4 custom-scrollbar">
-                            {/* Primary Image */}
+                            {/* Primary Image or Video */}
                             <div className="relative group flex-shrink-0">
-                                <img
-                                    src={previewImage.url}
-                                    className="max-h-[85vh] w-auto object-contain rounded-lg shadow-2xl border border-white/10"
-                                    alt="Preview 1"
-                                />
+                                {previewImage.isVideo ? (
+                                    <video
+                                        src={previewImage.url}
+                                        className="max-h-[85vh] w-auto object-contain rounded-lg shadow-2xl border border-white/10"
+                                        controls
+                                        autoPlay
+                                        loop
+                                        playsInline
+                                    />
+                                ) : (
+                                    <img
+                                        src={previewImage.url}
+                                        className="max-h-[85vh] w-auto object-contain rounded-lg shadow-2xl border border-white/10"
+                                        alt="Preview 1"
+                                    />
+                                )}
                                 {previewImage.url2 && <span className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs font-mono border border-white/10">Image 1</span>}
                             </div>
 
