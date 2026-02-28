@@ -189,15 +189,17 @@ export default function ProjectPage() {
             const sentences = project.script.match(/[^.!?]+[.!?]+/g) || [project.script];
 
             let generatedCount = 0;
+            const maxIter = Math.max(sentences.length, scenes.length);
 
             // 2. Iterate and Generate
-            for (let i = 0; i < sentences.length; i++) {
-                const text = sentences[i].trim();
+            for (let i = 0; i < maxIter; i++) {
+                const existingScene = scenes.find(s => s.order_index === i);
+                const text = existingScene?.text || (sentences[i] ? sentences[i].trim() : "");
                 if (!text) continue;
 
                 // Skip if already generated
-                if (scenes.find(s => s.order_index === i)) {
-                    setGenProgress(((i + 1) / sentences.length) * 100);
+                if (existingScene) {
+                    setGenProgress(((i + 1) / maxIter) * 100);
                     continue;
                 }
 
@@ -208,7 +210,7 @@ export default function ProjectPage() {
                     setGenerationLog("Resuming generation...");
                 }
 
-                setGenerationLog(`Generating scene ${i + 1} of ${sentences.length}...`);
+                setGenerationLog(`Generating scene ${i + 1} of ${maxIter}...`);
 
                 // Call Server Action
                 const result = await generateScene(projectId, i, text, project.settings);
@@ -227,7 +229,7 @@ export default function ProjectPage() {
                 });
 
                 generatedCount++;
-                setGenProgress(((i + 1) / sentences.length) * 100);
+                setGenProgress(((i + 1) / maxIter) * 100);
             }
             setGenerationLog("Generation complete!");
         } catch (e) {
@@ -249,18 +251,19 @@ export default function ProjectPage() {
         try {
             const sentences = project.script.match(/[^.!?]+[.!?]+/g) || [project.script];
             let generatedCount = 0;
+            const maxIter = Math.max(sentences.length, scenes.length);
 
-            for (let i = 0; i < sentences.length; i++) {
-                const text = sentences[i].trim();
+            for (let i = 0; i < maxIter; i++) {
+                const existingScene = scenes.find(s => s.order_index === i);
+                const text = existingScene?.text || (sentences[i] ? sentences[i].trim() : "");
                 if (!text) continue;
 
                 // Update progress
-                setGenProgress(((i) / sentences.length) * 100);
+                setGenProgress(((i) / maxIter) * 100);
 
                 // Use current state 'scenes' (snapshot) to decide what to do
                 // Note: We search the *original* list. If we fix something, we won't see the update in 'scenes' variable 
                 // until next render, but that's fine for sequential processing.
-                const existingScene = scenes.find(s => s.order_index === i);
 
                 // 1. Missing Scene
                 if (!existingScene) {

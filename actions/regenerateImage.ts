@@ -204,7 +204,8 @@ Output Quality: High-contrast, sharp lines, suitable for 4K video playback.`;
         // Also ensure media_type is set to 'image' (important if converting from 'video')
         const updateData: any = {
             prompt: fullPrompt,
-            media_type: 'image'
+            media_type: 'image',
+            status: 'ready'
         };
 
         if (imageTarget === 'secondary') {

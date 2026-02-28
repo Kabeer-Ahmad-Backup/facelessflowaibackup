@@ -287,32 +287,37 @@ No text in image.`;
                 targetVoiceId = VOICE_ID_MAP[settings.audioVoice];
             }
 
-            console.log(`Generating Audio with Voice ID: ${targetVoiceId}`);
-            let audioUrl = "";
-            let audioDuration = 5;
-            try {
-                // Check if voice is from GenAIPro (prefix: genaipro_)
-                if (targetVoiceId.startsWith('genaipro_')) {
-                    const actualVoiceId = targetVoiceId.replace('genaipro_', '');
-                    console.log(`Using GenAIPro provider with voice: ${actualVoiceId}`);
-                    const audioResult = await generateGenAIProAudio(text, actualVoiceId, projectId, sceneIndex);
-                    audioUrl = audioResult.url;
-                    audioDuration = audioResult.duration;
-                } else if (targetVoiceId.startsWith('qwen_')) {
-                    console.log(`Using Qwen TTS provider with voice: ${targetVoiceId}`);
-                    const audioResult = await generateQwenAudio(text, targetVoiceId, projectId, sceneIndex);
-                    audioUrl = audioResult.url;
-                    audioDuration = audioResult.duration;
-                } else {
-                    // Use Minimax for default voices
-                    console.log(`Using Minimax provider with voice: ${targetVoiceId}`);
-                    const audioResult = await generateMinimaxAudio(text, targetVoiceId, projectId, sceneIndex);
-                    audioUrl = audioResult.url;
-                    audioDuration = audioResult.duration;
+            let audioUrl = newScene?.audio_url || "";
+            let audioDuration = newScene?.duration || 5;
+
+            if (!audioUrl) {
+                console.log(`Generating Audio with Voice ID: ${targetVoiceId}`);
+                try {
+                    // Check if voice is from GenAIPro (prefix: genaipro_)
+                    if (targetVoiceId.startsWith('genaipro_')) {
+                        const actualVoiceId = targetVoiceId.replace('genaipro_', '');
+                        console.log(`Using GenAIPro provider with voice: ${actualVoiceId}`);
+                        const audioResult = await generateGenAIProAudio(text, actualVoiceId, projectId, sceneIndex);
+                        audioUrl = audioResult.url;
+                        audioDuration = audioResult.duration;
+                    } else if (targetVoiceId.startsWith('qwen_')) {
+                        console.log(`Using Qwen TTS provider with voice: ${targetVoiceId}`);
+                        const audioResult = await generateQwenAudio(text, targetVoiceId, projectId, sceneIndex);
+                        audioUrl = audioResult.url;
+                        audioDuration = audioResult.duration;
+                    } else {
+                        // Use Minimax for default voices
+                        console.log(`Using Minimax provider with voice: ${targetVoiceId}`);
+                        const audioResult = await generateMinimaxAudio(text, targetVoiceId, projectId, sceneIndex);
+                        audioUrl = audioResult.url;
+                        audioDuration = audioResult.duration;
+                    }
+                } catch (e: any) {
+                    console.error("Audio Generation Failed:", e);
+                    throw new Error(`Audio Gen Failed: ${e.message}`);
                 }
-            } catch (e: any) {
-                console.error("Audio Generation Failed:", e);
-                throw new Error(`Audio Gen Failed: ${e.message}`);
+            } else {
+                console.log(`Skipping TTS, preserving existing audio URL for scene ${sceneIndex}`);
             }
 
             // 7. Check for Stock Video (Stock+AI_Natural Mode)

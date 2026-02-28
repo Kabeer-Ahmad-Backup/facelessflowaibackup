@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
     'prettier',
     '@runware/sdk-js'
   ],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
   webpack: (config, { isServer }) => {
     config.module.rules.push({
       test: /\.(mp3|wav|m4a)$/,
