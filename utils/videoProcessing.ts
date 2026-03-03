@@ -109,7 +109,12 @@ export async function sliceVideo(
                 '-ss', `${start}`,
                 '-t', `${duration}`,
                 '-i', inputName,
-                '-c', 'copy',
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',
+                '-crf', '28',
+                '-c:a', 'aac',
+                '-map_metadata', '-1', // strictly remove bad incoming metadata
+                '-avoid_negative_ts', 'make_zero',
                 outputName
             ]);
         } catch (e: any) {

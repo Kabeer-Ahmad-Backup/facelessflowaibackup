@@ -37,6 +37,7 @@ export default function ProjectPage() {
     const [previewImage, setPreviewImage] = useState<{ url: string; url2?: string | null; isVideo?: boolean } | null>(null);
     const [showRegenOptions, setShowRegenOptions] = useState<string | null>(null);
     const [isValidating, setIsValidating] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
     const playerRef = useRef<any>(null);
 
     // Load Project Data
@@ -485,16 +486,10 @@ export default function ProjectPage() {
         return { valid: errors.length === 0, errors };
     };
 
-    const handleExportVideo = async (part?: number) => {
+    const handleVerifyScenes = async () => {
         if (!project) return;
+        if (isValidating) return;
 
-        // Prevent duplicate clicks during validation
-        if (isValidating) {
-            toast.warning('Already validating media files, please wait...');
-            return;
-        }
-
-        // Validate all scene media before export
         setIsValidating(true);
         toast.info('Validating media files...');
 
@@ -507,9 +502,10 @@ export default function ProjectPage() {
 
         if (!validation.valid) {
             console.error('Media validation failed:', validation.errors);
+            setIsVerified(false);
             toast.error(
                 <div>
-                    <div className="font-bold mb-2">Cannot export - Media validation failed:</div>
+                    <div className="font-bold mb-2">Cannot verify - Media validation failed:</div>
                     <ul className="list-disc pl-4 text-sm">
                         {validation.errors.slice(0, 5).map((err, i) => <li key={i}>{err}</li>)}
                         {validation.errors.length > 5 && <li>...and {validation.errors.length - 5} more issues</li>}
@@ -521,14 +517,20 @@ export default function ProjectPage() {
             return;
         }
 
-        toast.success('All media files validated successfully!');
+        setIsVerified(true);
+        toast.success("Validation complete! You can now export.");
+    };
 
-        // Optimistic update for UI state (local only, real update comes from API/polling)
-        // If part is specific, we might track its local loading state if needed, 
-        // but for now relying on global 'rendering' or quick polling is fine.
-        // Actually, let's set 'rendering' to true to show immediate feedback.
+    const handleExportVideo = async (part?: number) => {
+        if (!project) return;
+
+        if (!isVerified) {
+            toast.warning('Please verify scenes first.');
+            return;
+        }
+
         setRendering(true);
-        if (!part) setShowRenderModal(true);
+        setShowRenderModal(!part); // Don't show modal for multi-part (it has inline UI)
 
         try {
             // Call API route to trigger async render (POST for parts)
@@ -603,6 +605,20 @@ export default function ProjectPage() {
                             Show Progress
                         </button>
                     )}
+                    {/* VERIFY SCENES BUTTON */}
+                    {!isVerified && !rendering && project.status !== 'rendering' && project.status !== 'done' && !project.video_url && (
+                        <button
+                            onClick={() => handleVerifyScenes()}
+                            disabled={isValidating || scenes.filter(s => s.status === 'ready').length === 0}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                        >
+                            {isValidating ? (
+                                <><Loader2 size={16} className="animate-spin" /> Verifying...</>
+                            ) : (
+                                <><Sparkles size={16} /> Verify Scenes</>
+                            )}
+                        </button>
+                    )}
                     {/* SPLIT EXPORT UI */}
                     {(() => {
                         // Match backend logic for MAX_SCENES
@@ -643,7 +659,7 @@ export default function ProjectPage() {
                                                     ) : (
                                                         <button
                                                             onClick={() => handleExportVideo(partNum)}
-                                                            disabled={isRendering}
+                                                            disabled={isRendering || !isVerified}
                                                             className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-colors ${isRendering
                                                                 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
                                                                 : 'bg-stone-800 hover:bg-stone-700 text-stone-300 border border-white/10'
@@ -685,7 +701,7 @@ export default function ProjectPage() {
                             return (
                                 <button
                                     onClick={() => handleExportVideo()}
-                                    disabled={rendering || project.status === 'rendering' || scenes.filter(s => s.status === 'ready').length === 0}
+                                    disabled={rendering || project.status === 'rendering' || scenes.filter(s => s.status === 'ready').length === 0 || !isVerified}
                                     className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
                                 >
                                     {rendering || project.status === 'rendering' ? (

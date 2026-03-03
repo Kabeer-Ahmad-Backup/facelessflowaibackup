@@ -118,34 +118,56 @@ export async function POST(
 
         console.log(`[Render API] Optimization: ${totalFrames} frames / ${TARGET_CONCURRENCY} concurrency = ${dynamicFramesPerLambda} frames/lambda`);
 
-        const { renderId, bucketName } = await renderMediaOnLambda({
-            region: (process.env.REMOTION_AWS_REGION as any) || region,
-            functionName,
-            serveUrl,
-            composition: 'MirzaMain',
-            // @ts-ignore - bucketName is valid but types might be strict
-            bucketName: targetBucketName,
-            inputProps: {
-                scenes: scenesToRender,
-                settings: project.settings,
-                projectId,
-                isFirstPart: currentPartIndex === 0, // Use different prop name to avoid Remotion's part detection
-            },
-            codec: 'h264',
-            framesPerLambda: dynamicFramesPerLambda,
-            timeoutInMilliseconds: 900000,
-            // @ts-ignore - explicitly allowed by Remotion Lambda but types might differ
-            delayRenderTimeoutInMilliSeconds: 60000,
-            chromiumOptions: {
-                // ... other options if needed, or empty
-            },
-            downloadBehavior: { type: 'download', fileName: null },
-            webhook: {
-                url: `${baseUrl}/api/webhook/remotion`,
-                secret: webhookSecret,
-                customData: { projectId },
-            },
-        });
+        let renderId: string | undefined;
+        let bucketName: string | undefined;
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        while (retryCount < maxRetries) {
+            try {
+                const result = await renderMediaOnLambda({
+                    region: (process.env.REMOTION_AWS_REGION as any) || region,
+                    functionName,
+                    serveUrl,
+                    composition: 'MirzaMain',
+                    // @ts-ignore - bucketName is valid but types might be strict
+                    bucketName: targetBucketName,
+                    inputProps: {
+                        scenes: scenesToRender,
+                        settings: project.settings,
+                        projectId,
+                        isFirstPart: currentPartIndex === 0, // Use different prop name to avoid Remotion's part detection
+                    },
+                    codec: 'h264',
+                    framesPerLambda: dynamicFramesPerLambda,
+                    timeoutInMilliseconds: 900000,
+                    // @ts-ignore - explicitly allowed by Remotion Lambda but types might differ
+                    delayRenderTimeoutInMilliSeconds: 60000,
+                    chromiumOptions: {
+                        // ... other options if needed, or empty
+                    },
+                    downloadBehavior: { type: 'download', fileName: null },
+                    webhook: {
+                        url: `${baseUrl}/api/webhook/remotion`,
+                        secret: webhookSecret,
+                        customData: { projectId },
+                    },
+                });
+                renderId = result.renderId;
+                bucketName = result.bucketName;
+                break; // Success, exit retry loop
+            } catch (err: any) {
+                console.error(`[Render API] Attempt ${retryCount + 1} failed:`, err.message);
+                if (err.code === 'ENOTFOUND' || err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT') {
+                    retryCount++;
+                    if (retryCount >= maxRetries) throw err;
+                    console.log(`[Render API] Retrying in 2 seconds (Attempt ${retryCount + 1}/${maxRetries})...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                    throw err; // For other errors, fail immediately.
+                }
+            }
+        }
 
         console.log(`[Render API] Started Render: ${renderId}`);
 
