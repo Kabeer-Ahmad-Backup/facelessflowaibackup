@@ -63,10 +63,12 @@ export async function POST(
         // Dynamic MAX_SCENES based on visual style
         // Stock videos are heavier to process, so use lower limit
         const isStockMode = ['stock_natural', 'stock_vector', 'stock_art'].includes(project.settings.visualStyle || '');
-        const MAX_SCENES = isStockMode ? 50 : 200;
+        const hasVideoScenes = scenes.some((s: any) => s.media_type === 'video');
+        const MAX_SCENES = (hasVideoScenes || isStockMode) ? 50 : 200;
 
-        console.log(`[Render API] MAX_SCENES set to ${MAX_SCENES} (${isStockMode ? 'Stock Mode' : 'Image Mode'})`);
+        console.log(`[Render API] MAX_SCENES set to ${MAX_SCENES} (hasVideo: ${hasVideoScenes}, isStock: ${isStockMode})`);
         const webhookSecret = process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://facelessflowai.vercel.app';
 
         // REUSE BUCKET LOGIC:
         // If we have existing parts that successfully rendered (or even started), they used a bucket.
@@ -139,8 +141,9 @@ export async function POST(
             },
             downloadBehavior: { type: 'download', fileName: null },
             webhook: {
-                url: 'https://facelessflowai.vercel.app/api/webhook/remotion',
+                url: `${baseUrl}/api/webhook/remotion`,
                 secret: webhookSecret,
+                customData: { projectId },
             },
         });
 

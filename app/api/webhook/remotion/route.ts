@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         const { renderId, outBucket, outKey, inputProps } = body.payload;
         const region = process.env.REMOTION_AWS_REGION || 'us-east-1';
         const videoUrl = `https://${outBucket}.s3.${region}.amazonaws.com/${outKey}`;
-        const projectId = inputProps?.projectId;
+        const projectId = body.payload.customData?.projectId || inputProps?.projectId;
 
         if (projectId) {
             // Fetch project to check for multi-part
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         }
     } else if (body.type === 'error' || body.type === 'timeout') {
         const { inputProps, errorMessage, renderId } = body.payload;
-        const projectId = inputProps?.projectId;
+        const projectId = body.payload.customData?.projectId || inputProps?.projectId;
 
         if (projectId) {
             const { data: project } = await supabase.from('projects').select('*').eq('id', projectId).single();
