@@ -40,6 +40,7 @@ export type ProjectSettings = {
         transitionSound?: 'none' | 'camera_flash' | 'swoosh';
     };
     cameraMovements?: ('zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'pan_up' | 'pan_down' | 'static')[];
+    isVerified?: boolean;
 
     // Split Rendering Pipeline
     renderMode?: 'single' | 'split';

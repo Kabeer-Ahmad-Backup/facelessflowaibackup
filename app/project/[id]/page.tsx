@@ -46,6 +46,9 @@ export default function ProjectPage() {
             const { data: proj } = await supabase.from('projects').select('*').eq('id', projectId).single();
             if (proj) {
                 setProject(proj);
+                if (proj.settings?.isVerified) {
+                    setIsVerified(true);
+                }
                 // Load existing scenes
                 const { data: scns } = await supabase.from('scenes').select('*').eq('project_id', projectId).order('order_index');
                 if (scns) setScenes(scns);
@@ -185,6 +188,9 @@ export default function ProjectPage() {
         setGenProgress(0);
         setGenerationLog("Initializing generation...");
 
+        setIsVerified(false);
+        await updateProjectSettings(projectId, { isVerified: false });
+
         try {
             // 1. Split Script (Simple regex)
             const sentences = project.script.match(/[^.!?]+[.!?]+/g) || [project.script];
@@ -248,6 +254,9 @@ export default function ProjectPage() {
         setGenerating(true);
         setGenProgress(0);
         setGenerationLog("Analyzing missing content...");
+
+        setIsVerified(false);
+        await updateProjectSettings(projectId, { isVerified: false });
 
         try {
             const sentences = project.script.match(/[^.!?]+[.!?]+/g) || [project.script];
@@ -344,6 +353,10 @@ export default function ProjectPage() {
     const handleUpdateSettings = async (newSettings: Partial<ProjectSettings>) => {
         if (!project) return;
 
+        // Changing settings requires re-verification (e.g., visual style change invalidates generated images conceptually, or simply forces a re-check)
+        newSettings.isVerified = false;
+        setIsVerified(false);
+
         const result = await updateProjectSettings(projectId, newSettings);
         if (result.success && result.settings) {
             setProject({ ...project, settings: result.settings });
@@ -370,6 +383,11 @@ export default function ProjectPage() {
     const handleRegenerateAudio = async (sceneId: string, text: string, sceneIndex: number) => {
         if (!project) return;
         setRegeneratingAudio(sceneId);
+
+        // Changing scene media forces re-verification before next export
+        setIsVerified(false);
+        await updateProjectSettings(projectId, { isVerified: false });
+
         try {
             const result = await regenerateAudio(sceneId, text, project.settings.audioVoice, projectId, sceneIndex);
             if (result.success) {
@@ -394,6 +412,11 @@ export default function ProjectPage() {
         if (!project) return;
         setRegeneratingImage(sceneId);
         setShowRegenOptions(null); // Close options if open
+
+        // Changing scene media forces re-verification before next export
+        setIsVerified(false);
+        await updateProjectSettings(projectId, { isVerified: false });
+
         try {
             const result = await regenerateImage(
                 sceneId,
@@ -514,10 +537,20 @@ export default function ProjectPage() {
                 </div>,
                 { duration: 10000 }
             );
+
+            // Save failed verification to DB
+            if (project?.settings?.isVerified) {
+                await updateProjectSettings(projectId, { isVerified: false });
+            }
             return;
         }
 
         setIsVerified(true);
+        try {
+            await updateProjectSettings(projectId, { isVerified: true });
+        } catch (e) {
+            console.error("Failed to save verification status", e);
+        }
         toast.success("Validation complete! You can now export.");
     };
 

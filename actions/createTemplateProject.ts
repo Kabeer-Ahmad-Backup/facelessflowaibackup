@@ -35,8 +35,8 @@ export async function createTemplateProject(
     for (let i = 0; i < slices.length; i++) {
         const slice = slices[i];
 
-        if (i % 2 === 0) {
-            // Avatar Video Scene (Even index)
+        if (i % 4 === 0) {
+            // Avatar Video Scene (1 video every 4 scenes)
             scenesToInsert.push({
                 project_id: projectId,
                 order_index: i,
@@ -49,7 +49,7 @@ export async function createTemplateProject(
                 status: 'ready', // Immediately ready, skip visual mapping
             });
         } else {
-            // AI Image Scene (Odd index)
+            // AI Image Scene (3 images following each video)
             scenesToInsert.push({
                 project_id: projectId,
                 order_index: i,
