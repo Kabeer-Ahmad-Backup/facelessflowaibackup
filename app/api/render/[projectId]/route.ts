@@ -64,7 +64,7 @@ export async function POST(
         // Stock videos are heavier to process, so use lower limit
         const isStockMode = ['stock_natural', 'stock_vector', 'stock_art'].includes(project.settings.visualStyle || '');
         const hasVideoScenes = scenes.some((s: any) => s.media_type === 'video');
-        const MAX_SCENES = (hasVideoScenes || isStockMode) ? 50 : 200;
+        const MAX_SCENES = (hasVideoScenes || isStockMode) ? 100 : 200;
 
         console.log(`[Render API] MAX_SCENES set to ${MAX_SCENES} (hasVideo: ${hasVideoScenes}, isStock: ${isStockMode})`);
         const webhookSecret = process.env.REMOTION_WEBHOOK_SECRET || 'temp_secret';
