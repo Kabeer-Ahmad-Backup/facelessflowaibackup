@@ -41,10 +41,10 @@ export default function ProjectPage() {
     const [isVerified, setIsVerified] = useState(false);
     const playerRef = useRef<any>(null);
 
-    const { 
-        processVideo, 
-        workerStatus, 
-        workerProgress, 
+    const {
+        processVideo,
+        workerStatus,
+        workerProgress,
         isProcessing: isWorkerProcessing,
         error: workerError
     } = useAvatarWorker();
@@ -71,7 +71,7 @@ export default function ProjectPage() {
                         if (files && files.length > 0) {
                             const fileName = files[0].name;
                             const { data: { publicUrl } } = supabase.storage.from('projects').getPublicUrl(`${projectId}/${fileName}`);
-                            
+
                             // Trigger process (hook handles polling)
                             processVideo(projectId, publicUrl, proj.settings as ProjectSettings)
                                 .then(() => {
@@ -644,7 +644,7 @@ export default function ProjectPage() {
                         <div className="absolute inset-0 bg-orange-500/20 blur-3xl animate-pulse" />
                         <Loader2 size={48} className="text-orange-500 animate-spin relative" />
                     </div>
-                    
+
                     <h2 className="text-2xl font-bold font-serif mb-2 tracking-tight text-white">AI Narrative Analysis</h2>
                     <p className="text-stone-400 text-sm max-w-xs mb-8 leading-relaxed">
                         Our server-side engines are transcribing and slicing your video into semantic scenes.
@@ -656,8 +656,8 @@ export default function ProjectPage() {
                             <span className="text-sm font-bold text-orange-500">{workerProgress}%</span>
                         </div>
                         <div className="w-full h-1 bg-stone-800 rounded-full overflow-hidden border border-white/5">
-                            <div 
-                                className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-500 ease-out" 
+                            <div
+                                className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-500 ease-out"
                                 style={{ width: `${workerProgress}%` }}
                             />
                         </div>
@@ -669,7 +669,7 @@ export default function ProjectPage() {
                     {workerError && (
                         <div className="mt-8 p-4 bg-red-950/30 border border-red-500/20 rounded-xl max-w-md">
                             <p className="text-sm text-red-400">{workerError}</p>
-                            <button 
+                            <button
                                 onClick={() => window.location.reload()}
                                 className="mt-4 text-xs font-bold uppercase tracking-widest text-white hover:text-red-400 transition-colors"
                             >
@@ -733,7 +733,7 @@ export default function ProjectPage() {
                         // Match backend logic for MAX_SCENES
                         const isStockMode = ['stock_natural', 'stock_vector', 'stock_art'].includes(project.settings.visualStyle || '');
                         const hasVideoScenes = scenes.some((s: any) => s.media_type === 'video');
-                        const MAX_SCENES = (hasVideoScenes || isStockMode) ? 500 : 500;
+                        const MAX_SCENES = (hasVideoScenes || isStockMode) ? 800 : 800;
                         const totalParts = Math.ceil(scenes.length / MAX_SCENES);
 
                         if (scenes.length > MAX_SCENES) {
