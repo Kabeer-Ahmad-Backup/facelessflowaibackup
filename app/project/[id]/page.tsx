@@ -14,6 +14,7 @@ import { MainComposition } from '@/remotion/MainComposition';
 import { ChevronLeft, Play, LayoutList, Image as ImageIcon, Music, Type, AlertCircle, Sparkles, ChevronDown, Loader2, Wand2, Settings, RefreshCw, Download, X } from 'lucide-react';
 import { toast } from 'sonner';
 import RenderingModal from '@/components/RenderingModal';
+import { useAvatarWorker } from '@/hooks/useAvatarWorker';
 
 export default function ProjectPage() {
     const params = useParams();
@@ -40,6 +41,14 @@ export default function ProjectPage() {
     const [isVerified, setIsVerified] = useState(false);
     const playerRef = useRef<any>(null);
 
+    const { 
+        processVideo, 
+        workerStatus, 
+        workerProgress, 
+        isProcessing: isWorkerProcessing,
+        error: workerError
+    } = useAvatarWorker();
+
     // Load Project Data
     useEffect(() => {
         const loadProject = async () => {
@@ -52,6 +61,31 @@ export default function ProjectPage() {
                 // Load existing scenes
                 const { data: scns } = await supabase.from('scenes').select('*').eq('project_id', projectId).order('order_index');
                 if (scns) setScenes(scns);
+
+                // RESUME LOGIC: If template is pending and no scenes exist
+                if (proj.settings?.templatePending && (!scns || scns.length === 0)) {
+                    console.log('[ProjectPage] Resuming stalled template project...');
+                    try {
+                        // Find the raw video URL (Deterministic)
+                        const { data: files } = await supabase.storage.from('projects').list(projectId, { search: 'raw_source_avatar' });
+                        if (files && files.length > 0) {
+                            const fileName = files[0].name;
+                            const { data: { publicUrl } } = supabase.storage.from('projects').getPublicUrl(`${projectId}/${fileName}`);
+                            
+                            // Trigger process (hook handles polling)
+                            processVideo(projectId, publicUrl, proj.settings as ProjectSettings)
+                                .then(() => {
+                                    // Refresh scenes after success
+                                    supabase.from('scenes').select('*').eq('project_id', projectId).order('order_index')
+                                        .then(({ data: updatedScns }) => {
+                                            if (updatedScns) setScenes(updatedScns);
+                                        });
+                                });
+                        }
+                    } catch (e) {
+                        console.error('Failed to resume template:', e);
+                    }
+                }
             } else {
                 router.push('/');
             }
@@ -603,6 +637,48 @@ export default function ProjectPage() {
 
     return (
         <div className="min-h-screen bg-stone-950 text-stone-200 font-sans flex flex-col h-screen overflow-hidden">
+            {/* Worker Processing Overlay (Internal AI Analysis) */}
+            {isWorkerProcessing && (
+                <div className="fixed inset-0 z-[100] bg-stone-950/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+                    <div className="relative mb-8">
+                        <div className="absolute inset-0 bg-orange-500/20 blur-3xl animate-pulse" />
+                        <Loader2 size={48} className="text-orange-500 animate-spin relative" />
+                    </div>
+                    
+                    <h2 className="text-2xl font-bold font-serif mb-2 tracking-tight text-white">AI Narrative Analysis</h2>
+                    <p className="text-stone-400 text-sm max-w-xs mb-8 leading-relaxed">
+                        Our server-side engines are transcribing and slicing your video into semantic scenes.
+                    </p>
+
+                    <div className="w-full max-w-sm">
+                        <div className="flex justify-between items-end mb-2">
+                            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em]">Engines Running</span>
+                            <span className="text-sm font-bold text-orange-500">{workerProgress}%</span>
+                        </div>
+                        <div className="w-full h-1 bg-stone-800 rounded-full overflow-hidden border border-white/5">
+                            <div 
+                                className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-500 ease-out" 
+                                style={{ width: `${workerProgress}%` }}
+                            />
+                        </div>
+                        <p className="mt-4 text-xs font-medium text-stone-500 animate-pulse tracking-wide italic">
+                            {workerStatus || "Preparing AI models..."}
+                        </p>
+                    </div>
+
+                    {workerError && (
+                        <div className="mt-8 p-4 bg-red-950/30 border border-red-500/20 rounded-xl max-w-md">
+                            <p className="text-sm text-red-400">{workerError}</p>
+                            <button 
+                                onClick={() => window.location.reload()}
+                                className="mt-4 text-xs font-bold uppercase tracking-widest text-white hover:text-red-400 transition-colors"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* HEADER */}
             <header className="bg-stone-950/95 backdrop-blur-sm border-b border-white/10 p-4 flex items-center justify-between">

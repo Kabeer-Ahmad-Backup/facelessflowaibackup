@@ -3,16 +3,26 @@
 import { useState } from 'react';
 import { ArrowLeft, Upload, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { transcribeVideo, sliceVideo, uploadSlices } from '@/utils/videoProcessing';
+import { createClient } from '@/utils/supabase/client';
+import { getSignedUploadUrl } from '@/actions/uploadMediaChunk';
 import { initializeTemplateProject } from '@/actions/initializeTemplateProject';
 import { createTemplateProject } from '@/actions/createTemplateProject';
 import { ProjectSettings } from '@/types';
+import { useAvatarWorker } from '@/hooks/useAvatarWorker';
 
 export default function AvatarTemplateFlow({ onBack }: { onBack: () => void }) {
     const router = useRouter();
     const [status, setStatus] = useState<'idle' | 'processing' | 'error' | 'success'>('idle');
     const [progressStatus, setProgressStatus] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    const { 
+        processVideo, 
+        workerStatus, 
+        workerProgress, 
+        isProcessing: isWorkerProcessing 
+    } = useAvatarWorker();
     const [settings, setSettings] = useState<ProjectSettings>({
         aspectRatio: '16:9',
         visualStyle: 'reference_image',
@@ -36,49 +46,76 @@ export default function AvatarTemplateFlow({ onBack }: { onBack: () => void }) {
 
         try {
             setStatus('processing');
-            setProgressStatus('Loading local AI models (this takes a moment on first run)...');
-
-            // 1. Run STT to get timestamps
-            let chunks: any[];
-            try {
-                chunks = await transcribeVideo(file, setProgressStatus);
-                if (!chunks || chunks.length === 0) throw new Error("Could not detect any speech in this video.");
-            } catch (e: any) {
-                throw new Error(`STT Pipeline Error: ${e.message}`);
-            }
-
-            setProgressStatus('Slicing video into semantic scenes...');
-            // 2. Slice into chunks with FFmpeg
-            let slices: any[];
-            try {
-                slices = await sliceVideo(file, chunks, setProgressStatus);
-                if (slices.length === 0) throw new Error("Failed to extract valid segments.");
-            } catch (e: any) {
-                console.error("Caught FFmpeg error:", e);
-                const msg = e?.message || e?.toString() || JSON.stringify(e) || 'Unknown WASM Error';
-                throw new Error(`FFmpeg Slicing Error: ${msg}`);
-            }
-
+            setUploadProgress(0);
+            
+            // 1. Initialize the Project Row first
             setProgressStatus('Acquiring secure vault container...');
-            // 3. Initialize the Project Row first (required so Storage RLS accepts the upload path)
-            const { projectId } = await initializeTemplateProject();
+            const { projectId } = await initializeTemplateProject(settings);
 
-            setProgressStatus('Uploading assets to secure vault...');
-            // 4. Upload chunks to Supabase Projects Bucket
-            const uploadedSlices = await uploadSlices(projectId, slices, setProgressStatus);
+            // 2. Setup Deterministic Raw Filename
+            const fileExt = file.name.substring(file.name.lastIndexOf('.'));
+            const rawFileName = `${projectId}/raw_source_avatar${fileExt}`;
+            const supabase = createClient();
 
-            setProgressStatus('Weaving narrative template...');
-            // 5. Update Project and populate AI Scenes
-            await createTemplateProject(projectId, uploadedSlices, settings);
+            // 3. Resume Logic: Check if raw file already exists
+            setProgressStatus('Checking for existing upload...');
+            const { data: existingFiles } = await supabase.storage
+                .from('projects')
+                .list(projectId, { search: 'raw_source_avatar' });
+
+            const alreadyUploaded = existingFiles && existingFiles.length > 0;
+
+            if (alreadyUploaded) {
+                console.log('[Flow] Found existing raw video, skipping upload.');
+                setProgressStatus('Found existing upload. Resuming...');
+                setUploadProgress(100);
+            } else {
+                // 4. Upload with Progress Tracking
+                setProgressStatus('Uploading raw video for server-side analysis...');
+                const { signedUrl } = await getSignedUploadUrl(rawFileName);
+
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const percent = Math.round((event.loaded / event.total) * 100);
+                            setUploadProgress(percent);
+                        }
+                    };
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
+                        else reject(new Error(`Upload failed with status ${xhr.status}`));
+                    };
+                    xhr.onerror = () => reject(new Error('Network error during upload'));
+                    
+                    xhr.open('PUT', signedUrl);
+                    xhr.setRequestHeader('Content-Type', file.type);
+                    xhr.setRequestHeader('x-upsert', 'true');
+                    xhr.send(file);
+                });
+            }
+
+            // 5. Trigger Server-Side Processing (Worker hook)
+            setProgressStatus('Connecting to AI worker...');
+            const { data: { publicUrl: rawVideoUrl } } = supabase.storage.from('projects').getPublicUrl(rawFileName);
+
+            await processVideo(projectId, rawVideoUrl, settings);
 
             setStatus('success');
             router.push(`/project/${projectId}`);
         } catch (error: any) {
             console.error('Avatar Template Failed:', error);
             setStatus('error');
-            setErrorMessage(error.message || 'An unknown error occurred during processing.');
+            const isApple = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+            setErrorMessage(
+                error.message || 'An unknown error occurred during processing.' +
+                (error.message?.includes('fetch') && isApple ? "\n\nTIP: If you're on a Mac, ensure the file is fully downloaded from iCloud before uploading." : "")
+            );
         }
     };
+
+    const effectiveProgress = workerProgress > 0 ? workerProgress : uploadProgress;
+    const effectiveMessage = workerStatus || progressStatus;
 
     return (
         <div className="animate-in fade-in slide-in-from-right-8 duration-500">
@@ -97,7 +134,7 @@ export default function AvatarTemplateFlow({ onBack }: { onBack: () => void }) {
                     </div>
                     <h2 className="text-3xl font-bold font-serif mb-3">Avatar Interleave</h2>
                     <p className="text-stone-400 text-sm max-w-md mx-auto leading-relaxed">
-                        Upload your raw monologue video. We'll utilize on-device AI to transcribe your speech and slice the video into semantic sentences, ready to interweave with generated B-roll.
+                        Upload your raw monologue video. We'll utilize our server-side AI to transcribe your speech and slice the video into semantic scenes, ready to interweave with generated B-roll.
                     </p>
                 </div>
 
@@ -231,10 +268,31 @@ export default function AvatarTemplateFlow({ onBack }: { onBack: () => void }) {
                 )}
 
                 {status === 'processing' && (
-                    <div className="flex flex-col items-center justify-center py-12">
+                    <div className="flex flex-col items-center justify-center py-12 w-full max-w-md mx-auto">
                         <Loader2 size={40} className="text-orange-500 animate-spin mb-6" />
-                        <h3 className="text-lg font-semibold text-white mb-2">Analyzing Video</h3>
-                        <p className="text-sm text-stone-400 max-w-xs text-center animate-pulse">{progressStatus}</p>
+                        
+                        {effectiveProgress > 0 && effectiveProgress < 100 ? (
+                            <div className="w-full mb-6">
+                                <div className="flex justify-between items-end mb-2">
+                                    <span className="text-xs font-bold text-stone-500 uppercase tracking-tighter">
+                                        {workerProgress > 0 ? 'AI Processing' : 'Uploading to Cloud'}
+                                    </span>
+                                    <span className="text-sm font-bold text-orange-500">{effectiveProgress}%</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-stone-800 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-300 ease-out" 
+                                        style={{ width: `${effectiveProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <h3 className="text-lg font-semibold text-white mb-2">
+                                {effectiveProgress === 100 ? 'AI Analysis in Progress' : 'Preparing Assets'}
+                            </h3>
+                        )}
+                        
+                        <p className="text-sm text-stone-400 max-w-xs text-center animate-pulse">{effectiveMessage}</p>
                     </div>
                 )}
 

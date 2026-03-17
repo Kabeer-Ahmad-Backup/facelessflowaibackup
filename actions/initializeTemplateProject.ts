@@ -2,7 +2,9 @@
 
 import { createClient } from "@/utils/supabase/server";
 
-export async function initializeTemplateProject() {
+import { ProjectSettings } from "@/types";
+
+export async function initializeTemplateProject(settings: ProjectSettings) {
     const supabase = await createClient();
 
     // 1. Get User
@@ -14,9 +16,9 @@ export async function initializeTemplateProject() {
         .from('projects')
         .insert({
             user_id: user.id,
-            script: '', // Will populate later
+            script: 'Template Project (Pending Analysis)',
             status: 'draft',
-            settings: {}, // Will populate later
+            settings: { ...settings, templatePending: true },
         })
         .select()
         .single();

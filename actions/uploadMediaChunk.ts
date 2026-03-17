@@ -28,5 +28,9 @@ export async function getSignedUploadUrl(
         .from('projects')
         .getPublicUrl(filename);
 
-    return { token: data.token, url: publicUrlData.publicUrl };
+    return { 
+        token: data.token, 
+        url: publicUrlData.publicUrl,
+        signedUrl: data.signedUrl
+    };
 }
